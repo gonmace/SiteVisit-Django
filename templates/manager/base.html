@@ -1,0 +1,234 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<script>
+  (function(){var t=localStorage.getItem('wom-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Portal Manager{% endblock %} — SiteVisit</title>
+  <link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
+  <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/egalink-toasty.js/dist/toasty.min.css" rel="stylesheet">
+  <style>
+    .toast-container { position: fixed !important; z-index: 2147483647 !important; top: 64px !important; }
+  </style>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/css/all.min.css" rel="stylesheet">
+  {% tailwind_css %}
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-base-200">
+
+  <!-- Navbar -->
+  <header class="bg-base-100 border-b border-base-300 sticky top-0 z-10">
+    <div class="container mx-auto px-6 max-w-7xl">
+      <div class="flex items-center justify-between h-14">
+
+        <!-- Brand -->
+        <a href="{% if request.user.role == 'super_manager' %}{% url 'manager:dashboard' %}{% else %}{% url 'manager:visits_approval' %}{% endif %}" class="flex items-center gap-2 shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 175 105" class="h-7 w-auto text-primary" fill="currentColor">
+            <g transform="translate(0, 100) scale(0.104)">
+              <path d="M196-276q-57-60-86.5-133T80-560q0-78 29.5-151T196-844l48 48q-48 48-72 110.5T148-560q0 63 24 125.5T244-324l-48 48Zm96-96q-39-39-59.5-88T212-560q0-51 20.5-100t59.5-88l48 48q-30 27-45 64t-15 76q0 36 15 73t45 67l-48 48ZM280-80l135-405q-16-14-25.5-33t-9.5-42q0-42 29-71t71-29q42 0 71 29t29 71q0 23-9.5 42T545-485L680-80h-80l-26-80H387l-27 80h-80Zm133-160h134l-67-200-67 200Zm255-132-48-48q30-27 45-64t15-76q0-36-15-73t-45-67l48-48q39 39 58 88t22 100q0 51-20.5 100T668-372Zm96 96-48-48q48-48 72-110.5T812-560q0-63-24-125.5T716-796l48-48q57 60 86.5 133T880-560q0 78-28 151t-88 133Z"/>
+            </g>
+            <g transform="translate(102, 102) scale(0.073)">
+              <path d="M42-120v-92q0-34 16-56.5t45-36.5q54-26 115.5-43T358-365q78 0 139.5 17T613-305q29 14 45 36.5t16 56.5v92H42Zm60-60h512v-32q0-15-8.5-24.5T585-251q-43-19-96-36.5T358-305q-78 0-131 17.5T131-251q-12 5-20.5 14.5T102-212v32Zm148-288q-42-43-42-107h-10q-8 0-14-6t-6-14q0-8 6-14t14-6h10q0-40 20-72t52-52v39q0 6 4.5 10.5T295-685q7 0 11-4.5t4-10.5v-52q8-2 22-3.5t27-1.5q13 0 27 1.5t22 3.5v52q0 6 4 10.5t11 4.5q6 0 10.5-4.5T438-700v-39q32 20 51 52t19 72h10q8 0 14 6t6 14q0 8-6 14t-14 6h-10q0 64-42 107t-108 43q-66 0-108-43Zm174-42q24-25 24-65H268q0 40 24 65t66 25q42 0 66-25Zm236 149-2-29q-7-4-14.5-9T630-409l-26 14-22-32 26-19q-2-4-2-7.5v-15q0-3.5 2-7.5l-26-19 22-32 26 14 14-10q7-5 14-9l2-29h40l2 29q7 4 14 9l14 10 26-14 22 32-26 19q2 4 2 7.5v15q0 3.5-2 7.5l26 19-22 32-26-14q-6 5-13.5 10t-14.5 9l-2 29h-40Zm47-73q11-11 11-27t-11-27q-11-11-27-11t-27 11q-11 11-11 27t11 27q11 11 27 11t27-11Zm61-144-9-35q-10-4-20.5-11T721-639l-44 16-20-35 35-28q-2-5-3.5-11t-1.5-12q0-6 1.5-12t3.5-11l-35-28 20-35 44 16q7-8 17.5-15.5T759-805l9-35h38l9 35q10 3 20.5 10.5T853-779l44-16 20 35-35 28q2 5 3.5 11t1.5 12q0 6-1.5 12t-3.5 11l35 28-20 35-44-16q-7 8-17.5 15T815-613l-9 35h-38Zm60.5-89.5Q845-684 845-709t-16.5-41.5Q812-767 787-767t-41.5 16.5Q729-734 729-709t16.5 41.5Q762-651 787-651t41.5-16.5ZM358-180Z"/>
+            </g>
+          </svg>
+          <span class="font-bold text-base-content text-sm tracking-tight">SiteVisit</span>
+        </a>
+
+        <!-- Nav links -->
+        <nav class="hidden md:flex items-center gap-0.5">
+          {% with url_name=request.resolver_match.url_name %}
+          {% if request.user.role == 'super_manager' %}
+          <a href="{% url 'manager:dashboard' %}"
+             class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
+                    {% if url_name == 'dashboard' %}
+                      bg-primary/8 text-primary
+                    {% else %}
+                      text-base-content/50 hover:text-base-content hover:bg-base-200
+                    {% endif %}">
+            Dashboard
+          </a>
+          {% endif %}
+          <a href="{% url 'manager:visits_approval' %}"
+             class="relative px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
+                    {% if url_name == 'visits_approval' or url_name == 'visit_detail' or url_name == 'visit_create' %}
+                      bg-primary/8 text-primary
+                    {% else %}
+                      text-base-content/50 hover:text-base-content hover:bg-base-200
+                    {% endif %}">
+            Servicios
+            {% if request.user.role == 'super_manager' and pending_visits_count %}
+              <span class="ml-1 badge badge-warning badge-xs font-semibold">{{ pending_visits_count }}</span>
+            {% endif %}
+          </a>
+          <a href="{% url 'manager:sites_list' %}"
+             class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
+                    {% if url_name == 'sites_list' or url_name == 'site_create' or url_name == 'site_edit' or url_name == 'site_delete' or url_name == 'site_import' %}
+                      bg-primary/8 text-primary
+                    {% else %}
+                      text-base-content/50 hover:text-base-content hover:bg-base-200
+                    {% endif %}">
+            Sitios
+          </a>
+          {% if request.user.role == 'super_manager' %}
+          <a href="{% url 'manager:coordinators_list' %}"
+             class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
+                    {% if url_name == 'coordinators_list' or url_name == 'coordinator_create' or url_name == 'coordinator_edit' or url_name == 'coordinator_delete' %}
+                      bg-primary/8 text-primary
+                    {% else %}
+                      text-base-content/50 hover:text-base-content hover:bg-base-200
+                    {% endif %}">
+            Coordinadores
+          </a>
+          {% endif %}
+          <a href="{% url 'manager:users_list' %}"
+             class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
+                    {% if url_name == 'users_list' or url_name == 'technician_create' or url_name == 'technician_edit' or url_name == 'technician_delete' or url_name == 'technician_import' %}
+                      bg-primary/8 text-primary
+                    {% else %}
+                      text-base-content/50 hover:text-base-content hover:bg-base-200
+                    {% endif %}">
+            Técnicos
+          </a>
+          {% endwith %}
+        </nav>
+
+        <!-- Right: user + theme toggle + logout -->
+        <div class="flex items-center gap-2">
+          <div class="hidden lg:flex flex-col items-end max-w-44">
+            <span class="text-xs text-base-content/40 truncate leading-tight">
+              {{ request.user.get_full_name|default:request.user.email }}
+            </span>
+            <span class="text-[10px] text-base-content/70 truncate leading-tight">
+              {{ request.user.get_role_display }}
+            </span>
+          </div>
+
+          <!-- Theme toggle -->
+          <label class="swap swap-rotate btn btn-ghost btn-sm w-9 h-9 min-h-0 p-0 rounded-lg
+                        border border-base-300 text-base-content/50 hover:text-base-content"
+                 id="theme-toggle" title="Cambiar tema">
+            <input type="checkbox" id="theme-checkbox" class="hidden" onchange="toggleTheme(this.checked)">
+            <!-- sun -->
+            <svg class="swap-on w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z"/>
+            </svg>
+            <!-- moon -->
+            <svg class="swap-off w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+          </label>
+
+          <a href="{% url 'manager:logout' %}"
+             class="btn btn-ghost btn-sm w-9 h-9 min-h-0 p-0 rounded-lg
+                    border border-base-300 text-base-content/50 hover:text-base-content"
+             title="Cerrar sesión">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="container mx-auto px-6 py-8 max-w-7xl">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Toasty.js -->
+  <script src="https://cdn.jsdelivr.net/npm/egalink-toasty.js/dist/toasty.min.js"></script>
+  {% if messages %}
+  <script>
+    (function () {
+      var toast = new Toasty({ transition: 'slideUpFade', duration: 4500, progressBar: true });
+      {% for msg in messages %}
+      toast.{% if 'success' in msg.tags %}success{% elif 'error' in msg.tags %}error{% elif 'warning' in msg.tags %}warning{% else %}info{% endif %}("{{ msg|escapejs }}");
+      {% endfor %}
+    })();
+  </script>
+  {% endif %}
+
+  <!-- Theme toggle script -->
+  <script>
+    (function () {
+      var saved = localStorage.getItem('wom-theme') || 'light';
+      var cb = document.getElementById('theme-checkbox');
+      if (cb) cb.checked = (saved === 'dark');
+    })();
+
+    function toggleTheme(isDark) {
+      var theme = isDark ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('wom-theme', theme);
+    }
+  </script>
+
+  {% if debug %}
+    {% url 'django_browser_reload:reload' as reload_url %}
+    <script src="{{ reload_url }}" defer></script>
+  {% endif %}
+
+  <!-- Modal de confirmación reutilizable -->
+  <dialog id="confirm-modal" class="modal">
+    <div class="modal-box rounded-2xl px-6 pt-7 pb-6 max-w-sm shadow-lg text-center">
+      <div id="confirm-modal-icon-wrap" class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i id="confirm-modal-icon" class="fa-solid text-2xl"></i>
+      </div>
+      <h3 id="confirm-modal-title" class="text-base font-bold text-base-content mb-1.5"></h3>
+      <p id="confirm-modal-message" class="text-sm text-base-content/55 leading-relaxed"></p>
+      <div class="flex justify-center gap-2 mt-6">
+        <form method="dialog">
+          <button class="btn btn-ghost btn-sm h-9 min-h-0 text-xs">Cancelar</button>
+        </form>
+        <button id="confirm-modal-btn" class="btn btn-sm h-9 min-h-0 px-5 text-xs font-semibold"></button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+  </dialog>
+
+  <script>
+    var _confirmTypes = {
+      danger:  { icon: 'fa-triangle-exclamation', cssVar: '--color-error',    btn: 'btn-error'    },
+      warning: { icon: 'fa-circle-exclamation',   cssVar: '--color-warning',  btn: 'btn-warning'  },
+      success: { icon: 'fa-circle-check',         cssVar: '--color-success',  btn: 'btn-success'  },
+      info:    { icon: 'fa-circle-info',          cssVar: '--color-info',     btn: 'btn-info'     },
+      primary: { icon: 'fa-circle-question',      cssVar: '--color-primary',  btn: 'btn-primary'  },
+    };
+
+    function confirmAction(opts) {
+      var t     = _confirmTypes[opts.type] || _confirmTypes.primary;
+      var modal = document.getElementById('confirm-modal');
+      var wrap  = document.getElementById('confirm-modal-icon-wrap');
+      var icon  = document.getElementById('confirm-modal-icon');
+      var btn   = document.getElementById('confirm-modal-btn');
+
+      document.getElementById('confirm-modal-title').textContent   = opts.title   || '¿Confirmar acción?';
+      document.getElementById('confirm-modal-message').textContent = opts.message || '';
+
+      wrap.className        = 'w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4';
+      wrap.style.backgroundColor = 'color-mix(in oklab, var(' + t.cssVar + ') 12%, transparent)';
+      icon.className        = 'fa-solid ' + t.icon + ' text-2xl';
+      icon.style.color      = 'var(' + t.cssVar + ')';
+
+      btn.textContent = opts.confirmText || 'Confirmar';
+      btn.className   = 'btn btn-sm h-9 min-h-0 px-5 text-xs font-semibold ' + (opts.confirmClass || t.btn);
+      btn.onclick     = function () { modal.close(); if (opts.onConfirm) opts.onConfirm(); };
+
+      modal.showModal();
+    }
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

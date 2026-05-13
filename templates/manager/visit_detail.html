@@ -1,0 +1,479 @@
+{% extends "manager/base.html" %}
+{% block title %}Visita #{{ visit_number }}{% endblock %}
+
+{% block extra_head %}
+{% if tracking_points_geo %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- Back -->
+<div class="mb-5">
+  <a href="{% url 'manager:visits_approval' %}"
+     class="inline-flex items-center gap-1.5 text-sm text-base-content/50 hover:text-primary transition-colors">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+    </svg>
+    Volver a visitas
+  </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+  <!-- Left column -->
+  <div class="lg:col-span-1 flex flex-col gap-4">
+
+    <!-- Sitio card -->
+    <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
+      <div class="px-5 py-3 border-b border-base-200">
+        <p class="text-xs font-semibold text-base-content/40 uppercase tracking-wide">Sitio</p>
+      </div>
+      <div class="divide-y divide-base-200">
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Código</span>
+          <span class="text-sm font-mono font-bold text-base-content">{{ visit.site.code }}</span>
+        </div>
+        {% if visit.site.operator_code %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Cód. Operador</span>
+          <span class="text-sm font-mono text-base-content/70">{{ visit.site.operator_code }}</span>
+        </div>
+        {% endif %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Nombre</span>
+          <span class="text-sm text-base-content">{{ visit.site.name }}</span>
+        </div>
+      </div>
+    </div><!-- /sitio card -->
+
+    <!-- Visita card -->
+    <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
+
+      <!-- Card header -->
+      <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold text-base-content/40 uppercase tracking-wide">Visita</p>
+          <h2 class="text-lg font-bold text-base-content tracking-tight">#{{ visit_number }}</h2>
+        </div>
+        {% if visit.status == 'completada' %}
+        <div class="indicator">
+          {% if visit.photos.count %}
+          <span class="indicator-item badge badge-xs badge-info font-mono font-bold !text-black">{{ visit.photos.count }}</span>
+          {% endif %}
+          <span class="badge badge-outline badge-success badge-md font-medium">{{ visit.get_status_display }}</span>
+        </div>
+        {% else %}
+        <div class="inline-flex items-center gap-1">
+          <span class="badge badge-outline badge-md font-medium
+            {% if visit.status == 'pendiente_aprobacion' %}badge-warning
+            {% elif visit.status == 'programada' %}badge-info
+            {% elif visit.status == 'en_camino' or visit.status == 'llegada' %}badge-info
+            {% elif visit.status == 'trabajando' or visit.status == 'finalizando' %}badge-warning
+            {% elif visit.status == 'cancelada' %}badge-error
+            {% elif visit.status == 'rechazada' %}badge-error
+            {% else %}badge-ghost{% endif %}">
+            {{ visit.get_status_display }}
+          </span>
+          {% if visit.status == 'en_camino' %}<span class="text-[10px] text-base-content/40 font-mono">2/5</span>
+          {% elif visit.status == 'llegada' %}<span class="text-[10px] text-base-content/40 font-mono">3/5</span>
+          {% elif visit.status == 'trabajando' %}<span class="text-[10px] text-base-content/40 font-mono">4/5</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Details list -->
+      <div class="divide-y divide-base-200">
+        {% if visit.coordinator %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Coordinador</span>
+          <span class="text-sm text-base-content">{{ visit.coordinator.get_full_name|default:visit.coordinator.email }}</span>
+        </div>
+        {% endif %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Técnico</span>
+          <span class="text-sm text-base-content">{{ visit.technician.get_full_name|default:visit.technician.email }}</span>
+        </div>
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Empresa</span>
+          <span class="badge badge-sm badge-outline">{{ visit.technician.company|upper }}</span>
+        </div>
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Fecha</span>
+          <span class="text-sm text-base-content">{{ visit.scheduled_date|date:"d-m-y" }}, {{ visit.scheduled_date|date:"l" }}</span>
+        </div>
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Objetivo</span>
+          <span class="text-sm text-base-content">{{ visit.reason }}</span>
+        </div>
+        {% if visit.eta %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">H. Est. Llegada</span>
+          <span class="text-sm text-base-content font-mono">{{ visit.eta|time:"H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if visit.hora_inicio_trabajos %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Inicio</span>
+          <span class="text-sm text-base-content">{{ visit.hora_inicio_trabajos|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if visit.hora_fin_trabajos %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Fin</span>
+          <span class="text-sm text-base-content">{{ visit.hora_fin_trabajos|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if visit.hora_inicio_trabajos and visit.hora_fin_trabajos %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Duración</span>
+          <span class="text-sm font-semibold text-base-content">{{ visit_duration }}</span>
+        </div>
+        {% endif %}
+        {% if visit.notas %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Comentario/Obs.</span>
+          <span class="text-sm text-base-content whitespace-pre-wrap">{{ visit.notas }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Auditoría de aprobación -->
+        {% if visit.approved_at %}
+        <div class="flex items-start gap-3 px-5 py-3 bg-success/5">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Aprobado por</span>
+          <div>
+            <p class="text-sm text-base-content">{{ visit.approved_by.get_full_name|default:visit.approved_by.email|default:"—" }}</p>
+            <p class="text-xs text-base-content/40 mt-0.5">{{ visit.approved_at|date:"d/m/Y H:i" }}</p>
+          </div>
+        </div>
+        {% endif %}
+        {% if visit.rejected_at %}
+        <div class="flex items-start gap-3 px-5 py-3 bg-error/5">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Rechazado por</span>
+          <div>
+            <p class="text-sm text-base-content">{{ visit.rejected_by.get_full_name|default:visit.rejected_by.email|default:"—" }}</p>
+            <p class="text-xs text-base-content/40 mt-0.5">{{ visit.rejected_at|date:"d/m/Y H:i" }}</p>
+            {% if visit.rejection_reason %}
+            <p class="text-xs text-error mt-1">{{ visit.rejection_reason }}</p>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+
+      <!-- Acciones de aprobación (solo super_manager + estado pendiente) -->
+      {% if visit.status == 'pendiente_aprobacion' and request.user.role == 'super_manager' %}
+      <div class="px-5 py-4 border-t border-base-200 flex items-center gap-2">
+        <form method="post" action="{% url 'manager:visit_approve' pk=visit.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm h-9 min-h-0">
+            <i class="fa-solid fa-check text-xs"></i>
+            Aprobar servicio
+          </button>
+        </form>
+        <button onclick="document.getElementById('reject-visit-detail-{{ visit.pk }}').showModal()"
+                class="btn btn-ghost btn-sm h-9 min-h-0 text-error hover:bg-error/8">
+          <i class="fa-solid fa-xmark text-xs"></i>
+          Rechazar
+        </button>
+      </div>
+      {% endif %}
+
+    </div><!-- /visita card -->
+
+    <!-- Modal de rechazo desde detalle -->
+    {% if visit.status == 'pendiente_aprobacion' and request.user.role == 'super_manager' %}
+    <dialog id="reject-visit-detail-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
+      <div class="modal-box shadow-xl">
+        <h3 class="font-bold text-base text-base-content">Rechazar servicio</h3>
+        <p class="text-sm text-base-content/50 mt-1 mb-4">
+          Servicio para <strong class="text-base-content">{{ visit.technician.get_full_name }}</strong>
+          en <strong class="text-base-content">{{ visit.site.code }}</strong>.
+        </p>
+        <form method="post" action="{% url 'manager:visit_reject' pk=visit.pk %}">
+          {% csrf_token %}
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
+              Motivo de rechazo *
+            </label>
+            <textarea name="rejection_reason"
+                      required
+                      minlength="3"
+                      rows="3"
+                      placeholder="Indica el motivo…"
+                      class="textarea textarea-bordered w-full text-sm resize-none"></textarea>
+          </div>
+          <div class="modal-action">
+            <button type="button" onclick="this.closest('dialog').close()"
+                    class="btn btn-ghost btn-sm text-base-content/50">Cancelar</button>
+            <button type="submit" class="btn btn-delete btn-sm">Rechazar servicio</button>
+          </div>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+    {% endif %}
+
+    <!-- GPS Tracking -->
+    <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
+      <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-base-content">Tracking GPS</h3>
+        <span class="text-xs font-medium text-base-content/40">{{ visit.tracking_points.count }} evento(s)</span>
+      </div>
+      <div class="px-5 py-3">
+        {% if visit.tracking_points.all %}
+        <div class="flex flex-col gap-0">
+          {% for pt in visit.tracking_points.all %}
+          <div class="flex items-stretch gap-3">
+
+            <!-- Tiempo (columna fija izquierda) -->
+            <div class="w-10 shrink-0 flex flex-col items-end justify-start pt-2.5">
+              <p class="text-xs font-mono font-semibold text-base-content/70 leading-none">{{ pt.timestamp|date:"H:i" }}</p>
+              <p class="text-[9px] text-base-content/30 mt-0.5 leading-none">{{ pt.timestamp|date:"d/m" }}</p>
+            </div>
+
+            <!-- Conector vertical + icono -->
+            <div class="flex flex-col items-center shrink-0" style="width:20px">
+              <!-- Línea superior (oculta en el primero) -->
+              <div class="w-px flex-none {% if forloop.first %}invisible{% endif %} bg-base-300" style="height:10px"></div>
+              <!-- Icono del paso -->
+              <div class="w-5 h-5 rounded-full shrink-0 flex items-center justify-center
+                {% if pt.event == 'salida' %}bg-info/15
+                {% elif pt.event == 'llegada' %}bg-warning/15
+                {% elif pt.event == 'inicio' %}bg-success/15
+                {% elif pt.event == 'cierre' %}bg-delete/15
+                {% elif pt.event == 'finalizado' %}bg-primary/15
+                {% else %}bg-base-300{% endif %}">
+                {% if pt.event == 'salida' %}<i class="fa-solid fa-car text-[8px] text-info"></i>
+                {% elif pt.event == 'llegada' %}<i class="fa-solid fa-location-dot text-[8px] text-warning"></i>
+                {% elif pt.event == 'inicio' %}<i class="fa-solid fa-wrench text-[8px] text-success"></i>
+                {% elif pt.event == 'cierre' %}<i class="fa-solid fa-flag-checkered text-[8px] text-primary"></i>
+                {% elif pt.event == 'finalizado' %}<i class="fa-solid fa-screwdriver-wrench text-[8px] text-delete"></i>
+                {% else %}<i class="fa-solid fa-circle text-[8px] text-base-content/30"></i>
+                {% endif %}
+              </div>
+              <!-- Línea inferior (oculta en el último) -->
+              <div class="w-px flex-1 mt-1 {% if forloop.last %}invisible{% endif %} bg-base-300"></div>
+            </div>
+
+            <!-- Card del evento (inmediatamente a la derecha de hora/fecha) -->
+            <div class="flex-1 border border-base-200 rounded-xl px-3 py-2 mb-2.5 bg-base-50 self-start">
+              <div class="flex items-center gap-1.5">
+                <p class="text-xs font-semibold text-base-content">
+                  {% if pt.event == 'salida' %}Movilización
+                  {% elif pt.event == 'llegada' %}Llegada
+                  {% elif pt.event == 'inicio' %}Inicio
+                  {% elif pt.event == 'cierre' %}Cierre
+                  {% elif pt.event == 'finalizado' %}Finalizado
+                  {% else %}{{ pt.get_event_display }}{% endif %}
+                </p>
+                <span class="text-[9px] text-base-content/30 font-normal">— {{ pt.get_event_display }}</span>
+              </div>
+              <a href="https://www.google.com/maps/search/?api=1&query={{ pt.latitude|stringformat:'.6f' }},{{ pt.longitude|stringformat:'.6f' }}"
+                 target="_blank"
+                 class="text-[10px] text-info hover:underline font-mono mt-0.5 block">
+                {{ pt.latitude|stringformat:".5f" }}, {{ pt.longitude|stringformat:".5f" }}
+              </a>
+            </div>
+
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-8 text-center">
+          <i class="fa-solid fa-location-crosshairs text-2xl text-base-content/15 mb-2"></i>
+          <p class="text-xs text-base-content/30">Sin eventos GPS registrados</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /left column -->
+
+  <!-- Right column: photos -->
+  <div class="lg:col-span-2">
+    <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
+      <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between">
+        <h3 class="text-sm font-semibold text-base-content">Imágenes</h3>
+        <span class="text-xs font-medium text-base-content/40">{{ visit.photos.count }} imagen(es)</span>
+      </div>
+      <div class="p-5">
+        {% if visit.photos.all %}
+          <div class="grid grid-cols-3 md:grid-cols-4 gap-2">
+            {% for photo in visit.photos.all %}
+            <div>
+              <button type="button" class="block w-full" onclick="openLightbox('{{ photo.image.url }}', '{{ photo.get_photo_type_display }}')">
+                <img src="{{ photo.image.url }}"
+                     alt="{{ photo.get_photo_type_display }}"
+                     class="w-full aspect-square object-cover rounded-xl border border-base-200 hover:border-primary/30 hover:shadow-md transition-all duration-150 cursor-zoom-in">
+              </button>
+              <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                <span class="badge badge-sm badge-ghost text-xs">{{ photo.description|default:photo.get_photo_type_display }}</span>
+                {% if photo.taken_at %}
+                  <span class="text-xs text-base-content/40">{{ photo.taken_at|date:"d/m H:i" }}</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="flex flex-col items-center justify-center py-12 text-center">
+            <div class="w-10 h-10 rounded-xl bg-base-200 flex items-center justify-center mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <p class="text-sm text-base-content/30">Sin imágenes registradas</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Mapa de ruta (debajo de imágenes, solo si hay tracking points) -->
+    {% if tracking_points_geo %}
+    <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden mt-4">
+      <div class="px-5 py-3.5 border-b border-base-200 flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-info/10 flex items-center justify-center">
+          <i class="fa-solid fa-map text-[11px] text-info"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-base-content">Mapa de ruta</h3>
+      </div>
+      <div id="visit-map" style="height:400px;"></div>
+    </div>
+    {% endif %}
+
+  </div>
+
+</div><!-- /grid -->
+
+<!-- Lightbox modal -->
+<dialog id="lightbox" class="modal">
+  <div class="modal-box max-w-4xl p-0 bg-transparent shadow-none overflow-visible">
+    <div class="relative">
+      <button type="button" onclick="document.getElementById('lightbox').close()"
+              class="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-base-100 border border-base-300 shadow flex items-center justify-center hover:bg-base-200 transition-colors">
+        <i class="fa-solid fa-xmark text-sm text-base-content/70"></i>
+      </button>
+      <img id="lightbox-img" src="" alt=""
+           class="w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl bg-base-900">
+      <p id="lightbox-caption" class="text-center text-xs text-white/70 mt-2"></p>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop bg-black/70">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+function openLightbox(url, caption) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-caption').textContent = caption;
+  document.getElementById('lightbox').showModal();
+}
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) this.close();
+});
+</script>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% if tracking_points_geo %}
+{{ site_geo|json_script:"visit-site-data" }}
+{{ tracking_points_geo|json_script:"visit-tracking-data" }}
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  'use strict';
+  var siteData   = JSON.parse(document.getElementById('visit-site-data').textContent);
+  var trackData  = JSON.parse(document.getElementById('visit-tracking-data').textContent);
+  if (!trackData.length) return;
+
+  var cs = getComputedStyle(document.documentElement);
+  function cssVar(name) { return cs.getPropertyValue(name).trim(); }
+
+  var primaryColor   = cssVar('--color-primary')   || '#E6007E';
+  var secondaryColor = cssVar('--color-secondary')  || '#3B82F6';
+  var infoColor      = cssVar('--color-info')       || '#3B82F6';
+  var warningColor   = cssVar('--color-warning')    || '#F59E0B';
+  var successColor   = cssVar('--color-success')    || '#10B981';
+
+  var map = L.map('visit-map', { zoomControl: true });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // Icono del sitio — globo tipo Leaflet
+  function siteIcon() {
+    var color = secondaryColor || primaryColor;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="44" viewBox="0 0 26 38" style="filter:drop-shadow(0 2px 5px rgba(0,0,0,0.35));">'
+            + '<path d="M13 0C5.82 0 0 5.82 0 13C0 22.75 13 38 13 38S26 22.75 26 13C26 5.82 20.18 0 13 0Z" fill="' + color + '"/>'
+            + '<circle cx="13" cy="12" r="6.5" fill="rgba(255,255,255,0.88)"/>'
+            + '</svg>';
+    return L.divIcon({
+      className: '',
+      iconSize: [30, 44],
+      iconAnchor: [15, 44],
+      popupAnchor: [0, -46],
+      html: svg,
+    });
+  }
+
+  // Icono de tracking point numerado
+  var eventColors = { salida: infoColor, llegada: warningColor, inicio: successColor, cierre: primaryColor, finalizado: primaryColor };
+  function trackIcon(n, event) {
+    var color = eventColors[event] || '#6B7280';
+    return L.divIcon({
+      className: '',
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
+      popupAnchor: [0, -14],
+      html: '<div style="width:26px;height:26px;border-radius:50%;background:' + color + ';display:flex;align-items:center;justify-content:center;box-shadow:0 1px 6px rgba(0,0,0,0.25);border:2px solid white;">'
+           + '<span style="color:white;font-size:9px;font-weight:700;line-height:1;">' + n + '</span></div>',
+    });
+  }
+
+  var bounds = [];
+
+  // Marcador del sitio
+  var siteLat = siteData.lat, siteLng = siteData.lng;
+  L.marker([siteLat, siteLng], { icon: siteIcon() })
+    .addTo(map)
+    .bindPopup('<strong style="font-size:13px;">' + siteData.code + '</strong><br><span style="font-size:12px;color:#555;">' + siteData.name + '</span>');
+  bounds.push([siteLat, siteLng]);
+
+  // Polyline de la ruta
+  var latlngs = trackData.map(function (p) { return [p.lat, p.lng]; });
+  L.polyline(latlngs, { color: primaryColor, weight: 3, opacity: 0.7, dashArray: null }).addTo(map);
+
+  // Marcadores de tracking points
+  trackData.forEach(function (pt, i) {
+    var ts = new Date(pt.timestamp);
+    var timeStr = ts.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    var dateStr = ts.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' });
+    L.marker([pt.lat, pt.lng], { icon: trackIcon(i + 1, pt.event) })
+      .addTo(map)
+      .bindPopup(
+        '<strong style="font-size:12px;">' + pt.event_display + '</strong><br>'
+        + '<span style="font-size:11px;color:#888;">' + dateStr + ' ' + timeStr + '</span><br>'
+        + '<span style="font-size:10px;font-family:monospace;color:#aaa;">' + pt.lat.toFixed(5) + ', ' + pt.lng.toFixed(5) + '</span>'
+      );
+    bounds.push([pt.lat, pt.lng]);
+  });
+
+  map.fitBounds(bounds, { padding: [24, 24] });
+
+  // Actualizar colores si cambia el tema
+  new MutationObserver(function () {
+    var c = getComputedStyle(document.documentElement);
+    primaryColor   = c.getPropertyValue('--color-primary').trim()   || '#E6007E';
+    secondaryColor = c.getPropertyValue('--color-secondary').trim()  || '#3B82F6';
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+{% endif %}
+{% endblock %}

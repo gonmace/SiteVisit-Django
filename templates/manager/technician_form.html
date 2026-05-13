@@ -1,0 +1,168 @@
+{% extends "manager/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{{ cancel_url }}" class="btn btn-ghost btn-sm h-9 min-h-0 border border-base-300 text-base-content/50 text-xs">
+      ← Volver
+    </a>
+    <h1 class="text-xl font-bold text-base-content tracking-tight">{{ title }}</h1>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs p-6">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-error text-sm mb-4">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="grid grid-cols-2 gap-4">
+
+        <!-- Nombre -->
+        <div class="form-control">
+          <label class="label py-1">
+            <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">{{ form.first_name.label }}</span>
+          </label>
+          {{ form.first_name }}
+          {% if form.first_name.errors %}<p class="text-xs text-error mt-1">{{ form.first_name.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Apellido -->
+        <div class="form-control">
+          <label class="label py-1">
+            <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">{{ form.last_name.label }}</span>
+          </label>
+          {{ form.last_name }}
+          {% if form.last_name.errors %}<p class="text-xs text-error mt-1">{{ form.last_name.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Email (full width) -->
+        <div class="form-control col-span-2">
+          <label class="label py-1">
+            <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">{{ form.email.label }}</span>
+          </label>
+          {{ form.email }}
+          {% if form.email.errors %}<p class="text-xs text-error mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- RUT -->
+        <div class="form-control">
+          <label class="label py-1">
+            <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">{{ form.rut.label }}</span>
+          </label>
+          {{ form.rut }}
+          {% if form.rut.errors %}<p class="text-xs text-error mt-1">{{ form.rut.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Teléfono -->
+        <div class="form-control">
+          <label class="label py-1">
+            <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">{{ form.phone.label }}</span>
+          </label>
+          {{ form.phone }}
+          {% if form.phone.errors %}<p class="text-xs text-error mt-1">{{ form.phone.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Cargo -->
+        <div class="form-control">
+          <label class="label py-1">
+            <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">{{ form.cargo.label }}</span>
+          </label>
+          {{ form.cargo }}
+          {% if form.cargo.errors %}<p class="text-xs text-error mt-1">{{ form.cargo.errors.0 }}</p>{% endif %}
+        </div>
+
+        <!-- Empresa -->
+        {% if locked_company %}
+          {{ form.company }}{# hidden input #}
+          <div class="form-control">
+            <label class="label py-1">
+              <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">Empresa</span>
+            </label>
+            <div class="flex items-center gap-2 h-8">
+              <span class="badge badge-outline badge-sm">{{ locked_company|upper }}</span>
+              <span class="text-xs text-base-content/40">Asignada a tu empresa</span>
+            </div>
+          </div>
+        {% else %}
+          <div class="form-control">
+            <label class="label py-1">
+              <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">{{ form.company.label }}</span>
+            </label>
+            {{ form.company }}
+            {% if form.company.errors %}<p class="text-xs text-error mt-1">{{ form.company.errors.0 }}</p>{% endif %}
+          </div>
+        {% endif %}
+
+        <!-- Estado (solo al editar) -->
+        {% if form.status %}
+        <div class="form-control col-span-2">
+          <label class="label py-1">
+            <span class="label-text text-xs font-semibold text-base-content/70 uppercase tracking-wide">{{ form.status.label }}</span>
+          </label>
+          {{ form.status }}
+          {% if form.status.errors %}<p class="text-xs text-error mt-1">{{ form.status.errors.0 }}</p>{% endif %}
+          {% if object.status_changed_by %}
+          <p class="text-xs text-base-content/40 mt-1.5">
+            <i class="fa-solid fa-user-check mr-1"></i>
+            Autorizado por <span class="font-medium text-base-content/60">{{ object.status_changed_by.get_full_name|default:object.status_changed_by.email }}</span>
+            {% if object.status_changed_at %}· {{ object.status_changed_at|date:"d/m/Y H:i" }}{% endif %}
+          </p>
+          {% endif %}
+        </div>
+        {% elif status_locked %}
+        <div class="col-span-2 flex items-center gap-2.5 rounded-xl border border-warning/30 bg-warning/8 px-4 py-3">
+          <i class="fa-solid fa-lock text-warning text-sm shrink-0"></i>
+          <p class="text-xs text-base-content/60">El estado no puede modificarse hasta que el técnico registre su dispositivo.</p>
+        </div>
+        {% endif %}
+
+      </div>
+
+      <div class="flex justify-end gap-2 mt-6 pt-4 border-t border-base-200">
+        <a href="{{ cancel_url }}" class="btn btn-ghost btn-sm h-9 min-h-0 text-xs">Cancelar</a>
+        <button type="submit" class="btn btn-primary btn-sm h-9 min-h-0 px-5 text-xs font-semibold">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  {% if request.user.role == 'super_manager' and object and object.device %}
+  <div class="bg-base-100 rounded-2xl border-2 border-error/20 shadow-xs p-5 mt-4">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <p class="text-sm font-semibold text-error">Nuevo Dispositivo</p>
+        <p class="text-xs text-base-content/40 mt-0.5">Elimina el dispositivo actual. El técnico deberá volver a registrarse desde su nuevo celular.</p>
+      </div>
+      <form id="form-reset-device" method="post" action="{% url 'manager:technician_reset_device' object.pk %}">
+        {% csrf_token %}
+        <button type="button"
+                id="btn-reset-device"
+                class="btn btn-delete btn-sm h-9 min-h-0 px-4 text-xs font-semibold shrink-0">
+          Nuevo Dispositivo
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if request.user.role == 'super_manager' and object and object.device %}
+<script>
+  document.getElementById('btn-reset-device').addEventListener('click', function () {
+    confirmAction({
+      type:        'warning',
+      title:       'Eliminar dispositivo',
+      message:     'Se eliminará el dispositivo de {{ object.get_full_name|default:object.email|escapejs }}. El técnico deberá volver a registrarse desde su nuevo celular.',
+      confirmText: 'Eliminar dispositivo',
+      onConfirm:   function () { document.getElementById('form-reset-device').submit(); }
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

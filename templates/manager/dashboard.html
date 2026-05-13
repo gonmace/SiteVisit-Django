@@ -1,0 +1,789 @@
+{% extends "manager/base.html" %}
+{% load humanize %}
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Fila 1: KPIs globales ── -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Total</p>
+    <p class="text-3xl font-black text-base-content mt-1 leading-none">{{ total|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">visitas registradas</p>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Activos</p>
+    <p class="text-3xl font-black text-edit mt-1 leading-none">{{ active|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">en progreso ahora</p>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Completadas</p>
+    <p class="text-3xl font-black text-success mt-1 leading-none">{{ by_status.completada|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">{{ completion_rate }}% del total</p>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Canceladas</p>
+    <p class="text-3xl font-black text-error mt-1 leading-none">{{ by_status.cancelada|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">{{ cancellation_rate }}% del total</p>
+  </div>
+
+  <div class="col-span-2 md:col-span-1 bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Duración Prom. del Servicio</p>
+    {% if avg_duration %}
+    <p class="text-3xl font-black text-base-content mt-1 leading-none">{{ avg_duration }}<span class="text-base font-medium ml-0.5">min</span></p>
+    {% else %}
+    <p class="text-3xl font-black text-base-content/20 mt-1 leading-none">—</p>
+    {% endif %}
+    <p class="text-xs text-base-content/40 mt-1.5">trabajo completado</p>
+  </div>
+
+</div>
+
+<!-- ── Fila 2: KPIs operacionales ── -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Hoy</p>
+    <p class="text-3xl font-black text-base-content mt-1 leading-none">{{ hoy_count|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">visitas programadas</p>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Esta semana</p>
+    <p class="text-3xl font-black text-info mt-1 leading-none">{{ semana_count|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">últimos 7 días</p>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Pendientes</p>
+    <p class="text-3xl font-black {% if pendientes_count %}text-warning{% else %}text-base-content/25{% endif %} mt-1 leading-none">{{ pendientes_count|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">por aprobar</p>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Rechazadas</p>
+    <p class="text-3xl font-black {% if rechazadas_count %}text-error{% else %}text-base-content/25{% endif %} mt-1 leading-none">{{ rechazadas_count|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">{{ rechazo_rate }}% del total</p>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">T. Aprobación</p>
+    {% if avg_approval_hours is not None %}
+    <p class="text-3xl font-black text-base-content mt-1 leading-none">{{ avg_approval_hours }}<span class="text-base font-medium ml-0.5">h</span></p>
+    {% else %}
+    <p class="text-3xl font-black text-base-content/20 mt-1 leading-none">—</p>
+    {% endif %}
+    <p class="text-xs text-base-content/40 mt-1.5">promedio aprobación</p>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Completados hoy</p>
+    {% if completitud_hoy is not None %}
+    <p class="text-3xl font-black text-success mt-1 leading-none">{{ completitud_hoy }}<span class="text-base font-medium ml-0.5">%</span></p>
+    <p class="text-xs text-base-content/40 mt-1.5">{{ hoy_completadas }} de {{ hoy_count }}</p>
+    {% else %}
+    <p class="text-3xl font-black text-base-content/20 mt-1 leading-none">—</p>
+    <p class="text-xs text-base-content/40 mt-1.5">sin visitas hoy</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ── Distribución de estados ── -->
+{% if total %}
+<div class="bg-base-100 rounded-2xl border border-base-200 p-5 mb-5">
+  <div class="flex items-center gap-2 mb-3.5">
+    <div class="w-7 h-7 rounded-lg bg-base-200 flex items-center justify-center">
+      <i class="fa-solid fa-chart-bar text-[11px] text-base-content/40"></i>
+    </div>
+    <p class="text-sm font-bold text-base-content">Distribución por estado</p>
+  </div>
+  <div class="flex w-full h-2.5 rounded-full overflow-hidden gap-px">
+    {% if by_status.programada %}<div style="width:{% widthratio by_status.programada total 100 %}%;background:var(--color-info)" title="Programado: {{ by_status.programada }}"></div>{% endif %}
+    {% if active               %}<div style="width:{% widthratio active total 100 %}%;background:var(--color-warning)" title="En ejecución: {{ active }}"></div>{% endif %}
+    {% if by_status.completada %}<div style="width:{% widthratio by_status.completada total 100 %}%;background:var(--color-success)" title="Completado: {{ by_status.completada }}"></div>{% endif %}
+    {% if by_status.cancelada  %}<div style="width:{% widthratio by_status.cancelada total 100 %}%;background:var(--color-error)" title="Cancelado: {{ by_status.cancelada }}"></div>{% endif %}
+  </div>
+  <div class="flex flex-wrap gap-x-6 gap-y-1.5 mt-3">
+    <span class="flex items-center gap-1.5 text-xs text-base-content/50"><span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:var(--color-info)"></span>Programado <strong class="text-base-content/80 font-semibold ml-0.5">{{ by_status.programada }}</strong></span>
+    <span class="flex items-center gap-1.5 text-xs text-base-content/50"><span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:var(--color-warning)"></span>En ejecución <strong class="text-base-content/80 font-semibold ml-0.5">{{ active }}</strong></span>
+    <span class="flex items-center gap-1.5 text-xs text-base-content/50"><span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:var(--color-success)"></span>Completado <strong class="text-base-content/80 font-semibold ml-0.5">{{ by_status.completada }}</strong></span>
+    <span class="flex items-center gap-1.5 text-xs text-base-content/50"><span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:var(--color-error)"></span>Cancelado <strong class="text-base-content/80 font-semibold ml-0.5">{{ by_status.cancelada }}</strong></span>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Charts: Tendencia + Doughnut ── -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+
+  <div class="lg:col-span-2 bg-base-100 rounded-2xl border border-base-200 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+          <i class="fa-solid fa-chart-line text-[11px] text-primary"></i>
+        </div>
+        <p id="trendTitle" class="text-sm font-bold text-base-content">Últimos 7 días</p>
+      </div>
+      <div class="flex gap-0.5 bg-base-200 p-0.5 rounded-lg">
+        <button onclick="setTrendRange(7, this)"  class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold bg-base-100 shadow-sm text-base-content transition-all">7d</button>
+        <button onclick="setTrendRange(30, this)" class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold text-base-content/40 hover:text-base-content transition-all">30d</button>
+        <button onclick="setTrendRange(90, this)" class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold text-base-content/40 hover:text-base-content transition-all">90d</button>
+      </div>
+    </div>
+    <div style="height:200px;position:relative;">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-5">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-7 h-7 rounded-lg bg-base-200 flex items-center justify-center">
+        <i class="fa-solid fa-circle-half-stroke text-[11px] text-base-content/40"></i>
+      </div>
+      <p class="text-sm font-bold text-base-content">Estados</p>
+    </div>
+    <div style="height:200px;position:relative;">
+      <canvas id="statusChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Distribución semanal + Técnicos ── -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+
+  <div class="lg:col-span-2 bg-base-100 rounded-2xl border border-base-200 p-5">
+    <div class="flex items-center gap-2 mb-4">
+      <div class="w-7 h-7 rounded-lg bg-base-200 flex items-center justify-center">
+        <i class="fa-solid fa-calendar-days text-[11px] text-base-content/40"></i>
+      </div>
+      <p class="text-sm font-bold text-base-content">Por día de semana</p>
+    </div>
+    <div style="height:155px;position:relative;">
+      <canvas id="weekdayChart"></canvas>
+    </div>
+  </div>
+
+  <div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden">
+    <!-- Coordinadores -->
+    <div class="px-5 py-3.5 border-b border-base-200 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-base-200 flex items-center justify-center">
+          <i class="fa-solid fa-user-tie text-[11px] text-base-content/40"></i>
+        </div>
+        <p class="text-sm font-bold text-base-content">Coordinadores</p>
+      </div>
+      <span class="text-lg font-black text-base-content tabular-nums">{{ tech_stats.coordinators|intcomma }}</span>
+    </div>
+    <!-- Técnicos -->
+    <div class="px-5 py-3.5 border-b border-base-200 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-base-200 flex items-center justify-center">
+          <i class="fa-solid fa-users text-[11px] text-base-content/40"></i>
+        </div>
+        <p class="text-sm font-bold text-base-content">Técnicos</p>
+      </div>
+      <span class="text-lg font-black text-base-content tabular-nums">{{ tech_stats.total|intcomma }}</span>
+    </div>
+    <div class="divide-y divide-base-200">
+      <div class="flex items-center justify-between px-5 py-3">
+        <span class="flex items-center gap-1.5 text-xs text-base-content/40"><span class="w-1.5 h-1.5 rounded-full bg-success shrink-0"></span>Activos</span>
+        <span class="text-sm font-bold text-success tabular-nums">{{ tech_stats.active|intcomma }}</span>
+      </div>
+      <div class="flex items-center justify-between px-5 py-3">
+        <span class="flex items-center gap-1.5 text-xs text-base-content/40"><span class="w-1.5 h-1.5 rounded-full bg-warning shrink-0"></span>Pend. Aprobación</span>
+        <span class="text-sm font-bold text-warning tabular-nums">{{ tech_stats.pending|intcomma }}</span>
+      </div>
+      <div class="flex items-center justify-between px-5 py-3">
+        <span class="flex items-center gap-1.5 text-xs text-base-content/40"><span class="w-1.5 h-1.5 rounded-full bg-error shrink-0"></span>Inactivos</span>
+        <span class="text-sm font-bold text-error tabular-nums">{{ tech_stats.inactive|intcomma }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Mapa de operaciones ── -->
+<div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden mb-5">
+  <div class="px-5 py-3.5 border-b border-base-200 flex items-center justify-between flex-wrap gap-2">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-info/10 flex items-center justify-center">
+          <i class="fa-solid fa-map-location-dot text-[11px] text-info"></i>
+        </div>
+        <p class="text-sm font-bold text-base-content">Mapa de operaciones</p>
+      </div>
+      <button id="sites-toggle-btn" type="button"
+              class="btn btn-ghost btn-sm h-7 min-h-0 px-2.5 text-xs gap-1.5 border border-base-300 font-medium text-base-content/50 hover:text-base-content"
+              title="Mostrar todos los sitios del catálogo">
+        <i class="fa-solid fa-tower-cell text-[10px]"></i>
+        Todos los sitios
+      </button>
+    </div>
+    <!-- Filtros -->
+    <form id="map-filter-form" class="flex flex-wrap items-center gap-2">
+      {% if is_super_manager %}
+      <select name="company" class="select select-bordered select-sm h-8 min-h-0 text-xs w-28">
+        <option value="all">Todas las empresas</option>
+        <option value="wom">WOM</option>
+        <option value="pti">PTI</option>
+      </select>
+      {% endif %}
+      <select name="status" class="select select-bordered select-sm h-8 min-h-0 text-xs w-36">
+        <option value="">Todos los estados</option>
+        <option value="pendiente_aprobacion">Planificados</option>
+        <option value="programada">Programados</option>
+        <option value="en_camino,llegada,trabajando,finalizando">En Ejecución</option>
+        <option value="completada">Concluidos</option>
+        <option value="cancelada,rechazada">Cancelados</option>
+      </select>
+      {% if available_technicians %}
+      <select name="technician" class="select select-bordered select-sm h-8 min-h-0 text-xs w-40">
+        <option value="">Todos los técnicos</option>
+        {% for tech in available_technicians %}
+        <option value="{{ tech.id }}">{{ tech.first_name }} {{ tech.last_name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      <input type="date" name="date_from" value="{{ map_date_from }}"
+             class="input input-bordered input-sm h-8 min-h-0 text-xs w-32">
+      <input type="date" name="date_to" value="{{ map_date_to }}"
+             class="input input-bordered input-sm h-8 min-h-0 text-xs w-32">
+      <button type="submit" class="btn btn-info btn-sm h-8 min-h-0 px-3">
+        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+        Filtrar
+      </button>
+      <button type="button" id="map-clear-btn" class="btn btn-ghost btn-sm h-8 min-h-0 px-3 text-xs">
+        Limpiar
+      </button>
+    </form>
+  </div>
+  <!-- Contador de resultados -->
+  <div id="map-summary" class="px-5 py-1.5 border-b border-base-200 bg-base-50 hidden">
+    <p id="map-summary-text" class="text-xs text-base-content/50"></p>
+  </div>
+  <!-- Contenedor del mapa -->
+  <div class="relative">
+    <div id="operations-map" style="height:460px;"></div>
+    <div id="map-loading" class="absolute inset-0 bg-base-100/60 grid place-items-center hidden">
+      <span class="loading loading-spinner loading-md text-info"></span>
+    </div>
+    <div id="map-empty" class="absolute inset-0 grid place-items-center hidden">
+      <div class="text-center">
+        <i class="fa-solid fa-map-location-dot text-2xl text-base-content/15 mb-2 block"></i>
+        <p class="text-sm text-base-content/35">No hay sitios para los filtros aplicados</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Top Técnicos + Top Sitios + Empresa ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 {% if by_company %}xl:grid-cols-3{% endif %} gap-4">
+
+  <!-- Top técnicos -->
+  <div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-base-200 flex items-center gap-2">
+      <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+        <i class="fa-solid fa-ranking-star text-[11px] text-primary"></i>
+      </div>
+      <p class="text-sm font-bold text-base-content">Top Técnicos</p>
+    </div>
+    {% if top_techs %}
+    <div class="divide-y divide-base-200/60">
+      {% for tech in top_techs %}
+      <div class="flex items-center gap-3 px-5 py-3 hover:bg-primary/4 transition-colors">
+        <span class="text-[11px] text-base-content/20 font-mono tabular-nums w-4 shrink-0 text-right">{{ forloop.counter }}</span>
+        <div class="w-7 h-7 rounded-full bg-info/10 flex items-center justify-center shrink-0">
+          <span class="text-info text-[10px] font-bold leading-none">{{ tech.technician__first_name|slice:":1" }}{{ tech.technician__last_name|slice:":1" }}</span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-semibold text-base-content leading-tight truncate">{{ tech.technician__first_name }} {{ tech.technician__last_name }}</p>
+          <div class="w-full bg-base-200 rounded-full h-1 mt-1.5">
+            <div class="h-1 rounded-full bg-primary transition-all" style="width:{% widthratio tech.count max_tech_count 100 %}%"></div>
+          </div>
+        </div>
+        <span class="text-sm font-bold text-base-content tabular-nums shrink-0">{{ tech.count|intcomma }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-5 py-12 text-center">
+      <p class="text-sm text-base-content/25">Sin datos</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Top sitios -->
+  <div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden">
+    <div class="px-5 py-3.5 border-b border-base-200 flex items-center gap-2">
+      <div class="w-7 h-7 rounded-lg bg-info/10 flex items-center justify-center">
+        <i class="fa-solid fa-tower-cell text-[11px] text-info"></i>
+      </div>
+      <p class="text-sm font-bold text-base-content">Top Sitios</p>
+    </div>
+    {% if top_sites %}
+    <div class="divide-y divide-base-200/60">
+      {% for site in top_sites %}
+      <div class="flex items-center gap-3 px-5 py-3 hover:bg-primary/4 transition-colors">
+        <span class="text-[11px] text-base-content/20 font-mono tabular-nums w-4 shrink-0 text-right">{{ forloop.counter }}</span>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <p class="text-sm font-bold text-primary font-mono leading-none">{{ site.site__code }}</p>
+            {% if site.site__operator_code %}
+            <span class="text-xs text-info font-mono">{{ site.site__operator_code }}</span>
+            {% endif %}
+          </div>
+          <p class="text-xs text-base-content/35 truncate mt-0.5">{{ site.site__name }}</p>
+          <div class="w-full bg-base-200 rounded-full h-1 mt-1.5">
+            <div class="h-1 rounded-full bg-info transition-all" style="width:{% widthratio site.count max_site_count 100 %}%"></div>
+          </div>
+        </div>
+        <span class="text-sm font-bold text-base-content tabular-nums shrink-0">{{ site.count|intcomma }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="px-5 py-12 text-center">
+      <p class="text-sm text-base-content/25">Sin datos</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if by_company %}
+  <!-- Por empresa -->
+  <div class="bg-base-100 rounded-2xl border border-base-200 p-5">
+    <div class="flex items-center gap-2 mb-5">
+      <div class="w-7 h-7 rounded-lg bg-base-200 flex items-center justify-center">
+        <i class="fa-solid fa-building text-[11px] text-base-content/40"></i>
+      </div>
+      <p class="text-sm font-bold text-base-content">Por Empresa</p>
+    </div>
+    <div class="flex flex-col gap-5">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full shrink-0" style="background:#E6007E"></div>
+            <span class="text-sm font-bold text-base-content">WOM</span>
+          </div>
+          <div>
+            <span class="text-lg font-black text-base-content tabular-nums">{{ by_company.wom|intcomma }}</span>
+            {% if total %}<span class="text-xs text-base-content/35 ml-1.5">{% widthratio by_company.wom total 100 %}%</span>{% endif %}
+          </div>
+        </div>
+        <div class="w-full bg-base-200 rounded-full h-1.5">
+          {% if total %}<div class="h-1.5 rounded-full transition-all" style="width:{% widthratio by_company.wom total 100 %}%;background:#E6007E"></div>{% endif %}
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-primary shrink-0"></div>
+            <span class="text-sm font-bold text-base-content">PTI</span>
+          </div>
+          <div>
+            <span class="text-lg font-black text-base-content tabular-nums">{{ by_company.pti|intcomma }}</span>
+            {% if total %}<span class="text-xs text-base-content/35 ml-1.5">{% widthratio by_company.pti total 100 %}%</span>{% endif %}
+          </div>
+        </div>
+        <div class="w-full bg-base-200 rounded-full h-1.5">
+          {% if total %}<div class="h-1.5 rounded-full bg-secondary transition-all" style="width:{% widthratio by_company.pti total 100 %}%"></div>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var isDark      = document.documentElement.getAttribute('data-theme') === 'dark';
+  var gridColor   = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+  var labelColor  = isDark ? 'rgba(242,242,247,0.35)' : 'rgba(28,28,30,0.35)';
+  var cs          = getComputedStyle(document.documentElement);
+  var primaryColor  = cs.getPropertyValue('--color-primary').trim()  || '#E6007E';
+  var infoColor     = cs.getPropertyValue('--color-info').trim()     || '#3B82F6';
+  var warningColor  = cs.getPropertyValue('--color-warning').trim()  || '#F59E0B';
+  var successColor  = cs.getPropertyValue('--color-success').trim()  || '#10B981';
+  var errorColor    = cs.getPropertyValue('--color-error').trim()    || '#EF4444';
+
+  // Gradient para el área del trend
+  function makeGradient(ctx, color) {
+    var gradient = ctx.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, color + '28');
+    gradient.addColorStop(1, color + '00');
+    return gradient;
+  }
+
+  var trendCanvas = document.getElementById('trendChart');
+  var trendCtx    = trendCanvas.getContext('2d');
+  var trendRanges = JSON.parse('{{ trend_ranges_json|escapejs }}');
+  var rangeTitles = { '7': 'Últimos 7 días', '30': 'Últimos 30 días', '90': 'Últimas 13 semanas' };
+
+  var trendChart = new Chart(trendCtx, {
+    type: 'line',
+    data: {
+      labels: JSON.parse('{{ trend_labels_json|escapejs }}'),
+      datasets: [{
+        label: 'Visitas',
+        data: JSON.parse('{{ trend_data_json|escapejs }}'),
+        borderColor: primaryColor,
+        backgroundColor: makeGradient(trendCtx, primaryColor),
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: primaryColor,
+        pointBorderColor: 'transparent',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, padding: 10 } },
+      scales: {
+        x: { grid: { color: gridColor }, border: { display: false }, ticks: { color: labelColor, font: { size: 11 }, maxRotation: 0 } },
+        y: { grid: { color: gridColor }, border: { display: false }, ticks: { color: labelColor, font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true }
+      }
+    }
+  });
+
+  window.setTrendRange = function (days, btn) {
+    var key   = String(days);
+    var range = trendRanges[key];
+    trendChart.data.labels = range.labels;
+    trendChart.data.datasets[0].data = range.data;
+    trendChart.data.datasets[0].backgroundColor = makeGradient(trendCtx, primaryColor);
+    trendChart.update();
+    document.getElementById('trendTitle').textContent = rangeTitles[key];
+    document.querySelectorAll('.trend-btn').forEach(function (b) {
+      b.classList.remove('bg-base-100', 'shadow-sm', 'text-base-content');
+      b.classList.add('text-base-content/40');
+    });
+    btn.classList.add('bg-base-100', 'shadow-sm', 'text-base-content');
+    btn.classList.remove('text-base-content/40');
+  };
+
+  // Barras — día de semana (0=Lun … 4=Vie · 5=Sáb · 6=Dom)
+  var weekdayBg     = [0,1,2,3,4,5,6].map(function(i){ return (i>=5 ? primaryColor : infoColor) + '28'; });
+  var weekdayBorder = [0,1,2,3,4,5,6].map(function(i){ return (i>=5 ? primaryColor : infoColor) + '90'; });
+
+  new Chart(document.getElementById('weekdayChart'), {
+    type: 'bar',
+    data: {
+      labels: JSON.parse('{{ weekday_labels_json|escapejs }}'),
+      datasets: [{
+        label: 'Visitas',
+        data: JSON.parse('{{ weekday_data_json|escapejs }}'),
+        backgroundColor: weekdayBg,
+        borderColor: weekdayBorder,
+        borderWidth: 1.5,
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, padding: 10 } },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: labelColor, font: { size: 11 } } },
+        y: { grid: { color: gridColor }, border: { display: false }, ticks: { color: labelColor, font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true }
+      }
+    }
+  });
+
+  // Doughnut — estados
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Programado', 'En ejecución', 'Completado', 'Cancelado'],
+      datasets: [{
+        data: [{{ by_status.programada }}, {{ active }}, {{ by_status.completada }}, {{ by_status.cancelada }}],
+        backgroundColor: [infoColor, warningColor, successColor, errorColor],
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            color: labelColor,
+            font: { size: 10 },
+            boxWidth: 8,
+            boxHeight: 8,
+            padding: 10,
+            usePointStyle: true,
+            pointStyle: 'circle',
+            filter: function (item, data) { return data.datasets[0].data[item.index] > 0; }
+          }
+        },
+        tooltip: { padding: 10 }
+      }
+    }
+  });
+})();
+</script>
+
+<!-- ── Mapa de operaciones con Leaflet ── -->
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var cs = getComputedStyle(document.documentElement);
+  function cssVar(n) { return cs.getPropertyValue(n).trim(); }
+
+  var infoColor    = cssVar('--color-info')    || '#3B82F6';
+  var warningColor = cssVar('--color-warning') || '#F59E0B';
+  var successColor = cssVar('--color-success') || '#10B981';
+  var errorColor   = cssVar('--color-error')   || '#EF4444';
+  var WOM_COLOR    = '#E6007E';
+  var PTI_COLOR    = infoColor;
+
+  // Color por estado de visita
+  var STATUS_COLORS = {
+    pendiente_aprobacion: warningColor,
+    programada:           infoColor,
+    en_camino:            '#F97316',
+    llegada:              warningColor,
+    trabajando:           '#8B5CF6',
+    finalizando:          '#14B8A6',
+    completada:           successColor,
+    cancelada:            errorColor,
+    rechazada:            '#9CA3AF',
+  };
+
+  // Toggle: mostrar todos los sitios del catálogo
+  var showAllSites = false;
+
+  var map = L.map('operations-map', { zoomControl: true });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19,
+  }).addTo(map);
+  map.setView([-33.45, -70.65], 6);
+
+  // Capa 1: una visita = un marcador, con color por estado
+  var clusterGroup = L.markerClusterGroup({ chunkedLoading: true });
+  map.addLayer(clusterGroup);
+
+  // Capa 2: globos balloon para todos los sitios del catálogo (toggle)
+  var allSitesGroup = L.layerGroup();
+  map.addLayer(allSitesGroup);
+
+  // ── Iconos ──
+
+  function visitIcon(status) {
+    var color = STATUS_COLORS[status] || '#6B7280';
+    var html = '<div style="width:30px;height:30px;border-radius:50%;background:' + color
+      + ';border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.28);'
+      + 'display:flex;align-items:center;justify-content:center;">'
+      + '<i class="fa-solid fa-person-digging" style="color:white;font-size:11px;"></i>'
+      + '</div>';
+    return L.divIcon({
+      className: '',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+      popupAnchor: [0, -18],
+      html: html,
+    });
+  }
+
+  function ghostSiteIcon(company) {
+    var color = company === 'wom' ? WOM_COLOR : PTI_COLOR;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="32" viewBox="0 0 26 38"'
+            + ' style="opacity:0.75;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.25));">'
+            + '<path d="M13 0C5.82 0 0 5.82 0 13C0 22.75 13 38 13 38S26 22.75 26 13C26 5.82 20.18 0 13 0Z" fill="' + color + '"/>'
+            + '<circle cx="13" cy="12" r="6.5" fill="rgba(255,255,255,0.88)"/>'
+            + '</svg>';
+    return L.divIcon({
+      className: '',
+      iconSize: [22, 32],
+      iconAnchor: [11, 32],
+      popupAnchor: [0, -34],
+      html: svg,
+    });
+  }
+
+  // ── Popups ──
+
+  function buildVisitPopup(v) {
+    var color = STATUS_COLORS[v.status] || '#6B7280';
+    return '<div style="min-width:190px;">'
+      + '<p style="font-size:12px;font-weight:700;color:' + color + ';margin:0 0 5px;">' + v.status_display + '</p>'
+      + '<p style="font-size:13px;font-weight:700;margin:0 0 1px;">' + v.site_code + '</p>'
+      + '<p style="font-size:11px;color:#666;margin:0 0 6px;">' + v.technician_name + ' · ' + v.scheduled_date + '</p>'
+      + (v.tracking_count ? '<p style="font-size:10px;color:#10B981;margin:0 0 6px;">📍 ' + v.tracking_count + ' evento(s) GPS</p>' : '')
+      + '<a href="/manager/visits/' + v.id + '/" style="display:block;font-size:11px;font-weight:600;color:#3B82F6;text-decoration:none;">Ver detalle →</a>'
+      + '</div>';
+  }
+
+  function buildGhostPopup(site) {
+    return '<div style="min-width:160px;">'
+      + '<p style="font-size:13px;font-weight:700;margin:0 0 2px;">' + site.code + '</p>'
+      + '<p style="font-size:11px;color:#666;margin:0 0 6px;">' + site.name + '</p>'
+      + '<span style="display:inline-block;padding:1px 6px;border-radius:9px;background:#eee;font-size:10px;font-weight:600;">' + site.company.toUpperCase() + '</span>'
+      + '<p style="font-size:10px;color:#aaa;margin:6px 0 0;">Sin visitas en el período</p>'
+      + '</div>';
+  }
+
+  // ── Carga principal: una visita = un marcador ──
+
+  function getFormParams() {
+    var form = document.getElementById('map-filter-form');
+    var data = new FormData(form);
+    var params = new URLSearchParams();
+    data.forEach(function (val, key) { if (val) params.append(key, val); });
+    return params.toString();
+  }
+
+  // IDs de sitios con visitas en el filtro actual (para el ghost layer)
+  var filteredSiteIds = new Set();
+
+  function loadMap() {
+    var loading  = document.getElementById('map-loading');
+    var emptyMsg = document.getElementById('map-empty');
+    var summary  = document.getElementById('map-summary');
+    var summaryT = document.getElementById('map-summary-text');
+    loading.classList.remove('hidden');
+    emptyMsg.classList.add('hidden');
+    summary.classList.add('hidden');
+
+    fetch('/api/v1/dashboard/map-data/?' + getFormParams(), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        clusterGroup.clearLayers();
+        filteredSiteIds = new Set();
+
+        var visits = data.visits || [];
+
+        if (!visits.length && !showAllSites) {
+          loading.classList.add('hidden');
+          emptyMsg.classList.remove('hidden');
+          return;
+        }
+
+        var bounds = [];
+        visits.forEach(function (v) {
+          if (v.lat == null || v.lng == null) return;
+          filteredSiteIds.add(v.site_id);
+          var marker = L.marker([v.lat, v.lng], { icon: visitIcon(v.status) });
+          marker.bindPopup(buildVisitPopup(v), { maxWidth: 250 });
+          clusterGroup.addLayer(marker);
+          bounds.push([v.lat, v.lng]);
+        });
+
+        if (showAllSites) {
+          refreshAllSitesLayer();
+        }
+
+        if (bounds.length) {
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+        } else if (!showAllSites) {
+          emptyMsg.classList.remove('hidden');
+        }
+
+        var siteCount = (data.sites || []).length;
+        summaryT.textContent = siteCount + ' sitio(s) · ' + visits.length + ' visita(s)'
+          + (showAllSites ? ' (+ catálogo completo)' : '');
+        summary.classList.remove('hidden');
+        loading.classList.add('hidden');
+      })
+      .catch(function () {
+        loading.classList.add('hidden');
+      });
+  }
+
+  // ── Capa de todos los sitios (toggle) ──
+  // Sitios con visitas muestran AMBOS iconos: el círculo de visita Y el globo del catálogo
+
+  function refreshAllSitesLayer() {
+    allSitesGroup.clearLayers();
+    if (!showAllSites) return;
+
+    fetch('/api/v1/sites/', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var sites = Array.isArray(data) ? data : (data.results || []);
+        sites.forEach(function (site) {
+          var marker = L.marker([site.latitude, site.longitude], { icon: ghostSiteIcon(site.company) });
+          marker.bindPopup(buildGhostPopup(site), { maxWidth: 220 });
+          allSitesGroup.addLayer(marker);
+        });
+      })
+      .catch(function () {});
+  }
+
+  // ── Toggle ──
+
+  var toggleBtn = document.getElementById('sites-toggle-btn');
+  toggleBtn.addEventListener('click', function () {
+    showAllSites = !showAllSites;
+    if (showAllSites) {
+      toggleBtn.classList.remove('btn-ghost', 'text-base-content/50');
+      toggleBtn.classList.add('btn-secondary');
+      toggleBtn.style.color = '';
+      refreshAllSitesLayer();
+    } else {
+      toggleBtn.classList.add('btn-ghost', 'text-base-content/50');
+      toggleBtn.classList.remove('btn-secondary');
+      allSitesGroup.clearLayers();
+    }
+    // Actualizar el texto del resumen
+    var summaryT = document.getElementById('map-summary-text');
+    if (summaryT && summaryT.textContent) {
+      var base = summaryT.textContent.replace(/ \(\+ todos los sitios del catálogo\)/, '');
+      summaryT.textContent = base + (showAllSites ? ' (+ todos los sitios del catálogo)' : '');
+    }
+  });
+
+  // Inicializar
+  loadMap();
+
+  document.getElementById('map-filter-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    loadMap();
+  });
+
+  document.getElementById('map-clear-btn').addEventListener('click', function () {
+    var form = document.getElementById('map-filter-form');
+    form.reset();
+    var dFrom = form.querySelector('[name="date_from"]');
+    var dTo   = form.querySelector('[name="date_to"]');
+    if (dFrom) dFrom.value = '{{ map_date_from }}';
+    if (dTo)   dTo.value   = '{{ map_date_to }}';
+    loadMap();
+  });
+
+  new MutationObserver(function () {
+    var c = getComputedStyle(document.documentElement);
+    PTI_COLOR = c.getPropertyValue('--color-info').trim() || '#3B82F6';
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
+{% endblock %}

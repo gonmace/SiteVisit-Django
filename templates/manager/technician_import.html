@@ -1,0 +1,113 @@
+{% extends "manager/base.html" %}
+{% block title %}Importar Técnicos{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+
+  <!-- Back + title -->
+  <div class="flex items-center gap-3 mb-6">
+    <a href="{% url 'manager:users_list' %}"
+       class="btn btn-ghost btn-sm h-9 min-h-0 border border-base-300 text-base-content/50 text-xs">
+      ← Volver
+    </a>
+    <div>
+      <h1 class="text-xl font-bold text-base-content tracking-tight">Importar Técnicos</h1>
+      <p class="text-xs text-base-content/40 mt-0.5">Carga masiva desde archivo Excel</p>
+    </div>
+  </div>
+
+  <!-- Upload card -->
+  <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden mb-4">
+
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- Drop zone -->
+      <label for="file-input"
+             class="flex flex-col items-center justify-center gap-3 py-12 px-8 cursor-pointer
+                    border-b border-base-200 hover:bg-base-50 transition-colors group">
+        <div class="w-14 h-14 rounded-2xl bg-primary/8 flex items-center justify-center
+                    group-hover:bg-primary/12 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-primary" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        </div>
+        <div class="text-center">
+          <p class="text-sm font-semibold text-base-content">Seleccionar archivo</p>
+          <p class="text-xs text-base-content/40 mt-0.5">.xlsx o .xls</p>
+        </div>
+        <input id="file-input" type="file" name="file" accept=".xlsx,.xls" class="hidden"
+               onchange="document.getElementById('file-name').textContent = this.files[0]?.name || ''">
+      </label>
+
+      <!-- File name feedback -->
+      <div class="px-6 py-3 min-h-[2.5rem] flex items-center justify-between border-b border-base-200">
+        <span id="file-name" class="text-xs text-base-content/50 truncate italic"></span>
+        <div class="flex gap-2 shrink-0 ml-4">
+          <a href="{% url 'manager:users_list' %}"
+             class="btn btn-ghost btn-xs h-7 min-h-0 text-xs text-base-content/40">Cancelar</a>
+          <button type="submit"
+                  class="btn btn-secondary btn-xs h-7 min-h-0 px-4 text-xs font-semibold">
+            Importar
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Column format reference -->
+    <div class="px-6 py-5">
+      <p class="text-xs font-semibold text-base-content/40 uppercase tracking-wide mb-3">
+        Formato de columnas
+      </p>
+      <div class="flex flex-wrap gap-2">
+
+        <div class="flex items-center gap-1.5 bg-base-200/70 rounded-lg px-3 py-1.5">
+          <span class="text-[10px] font-bold text-base-content/30 font-mono">A</span>
+          <span class="text-xs font-medium text-base-content">Nombre</span>
+          <span class="text-error text-xs leading-none">*</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-base-200/70 rounded-lg px-3 py-1.5">
+          <span class="text-[10px] font-bold text-base-content/30 font-mono">B</span>
+          <span class="text-xs text-base-content/60">Apellido</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-base-200/70 rounded-lg px-3 py-1.5">
+          <span class="text-[10px] font-bold text-base-content/30 font-mono">C</span>
+          <span class="text-xs font-medium text-base-content">Email</span>
+          <span class="text-error text-xs leading-none">*</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-base-200/70 rounded-lg px-3 py-1.5">
+          <span class="text-[10px] font-bold text-base-content/30 font-mono">D</span>
+          <span class="text-xs text-base-content/60">RUT</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-base-200/70 rounded-lg px-3 py-1.5">
+          <span class="text-[10px] font-bold text-base-content/30 font-mono">E</span>
+          <span class="text-xs text-base-content/60">Cargo</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-base-200/70 rounded-lg px-3 py-1.5">
+          <span class="text-[10px] font-bold text-base-content/30 font-mono">F</span>
+          <span class="text-xs text-base-content/60">Teléfono</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 bg-base-200/70 rounded-lg px-3 py-1.5">
+          <span class="text-[10px] font-bold text-base-content/30 font-mono">G</span>
+          <span class="text-xs font-medium text-base-content">Empresa</span>
+          <span class="text-error text-xs leading-none">*</span>
+        </div>
+
+      </div>
+      <p class="text-xs text-base-content/30 mt-3">
+        <span class="text-error">*</span> Requeridos. Empresa: <code class="font-mono">wom</code> o <code class="font-mono">pti</code>. Fila 1 = encabezado. Los técnicos importados quedan con activación pendiente.
+      </p>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

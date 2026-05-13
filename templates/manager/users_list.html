@@ -1,0 +1,477 @@
+{% extends "manager/base.html" %}
+{% load humanize user_tags %}
+{% block title %}Técnicos{% endblock %}
+
+{% block content %}
+
+<!-- Header + search -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-xl font-bold text-base-content tracking-tight">Técnicos</h1>
+    <p class="text-xs text-base-content/40 mt-0.5">{{ page_obj.paginator.count|intcomma }} técnico(s)</p>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <form method="get" class="flex items-center gap-2">
+      <input type="search" name="q" value="{{ q }}"
+             placeholder="Nombre o email…"
+             class="input input-bordered input-sm h-9 w-48 text-sm">
+      <button type="submit" class="btn btn-info btn-sm h-9 min-h-0 px-4 text-xs font-semibold">
+        Buscar
+      </button>
+      {% if q %}
+        <a href="{% url 'manager:users_list' %}" class="btn btn-ghost btn-sm h-9 min-h-0 text-xs text-base-content/50">
+          Limpiar
+        </a>
+      {% endif %}
+    </form>
+    {% if request.user.role == 'super_manager' %}
+      <a href="{% url 'manager:technician_import' %}" class="btn btn-secondary btn-sm h-9 min-h-0 text-xs">
+        Importar Excel
+      </a>
+    {% endif %}
+    {% if is_manager %}
+      <a href="{% url 'manager:technician_create' %}" class="btn btn-success btn-sm h-9 min-h-0 px-4 text-xs font-semibold">
+        + Agregar
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+{% if users %}
+
+<!-- Mobile: cards -->
+<div class="md:hidden space-y-3">
+  {% for user in users %}
+  <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs p-4">
+    <div class="flex items-start gap-3">
+      {% if user.profile_photo and user.profile_photo.image %}
+      <div class="w-12 h-12 rounded-full bg-cover bg-center shrink-0" style="background-image:url('{{ user.profile_photo.image.url }}');"></div>
+      {% else %}
+      <div class="w-12 h-12 rounded-full bg-info/10 flex items-center justify-center shrink-0">
+        <span class="text-info text-sm font-bold">{{ user.get_full_name|default:user.email|initials }}</span>
+      </div>
+      {% endif %}
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-sm font-semibold text-base-content truncate">{{ user.get_full_name|default:"—" }}</p>
+          {% if not is_manager %}
+            {% if user.status == 1 %}
+              <span class="badge badge-sm badge-outline badge-warning shrink-0">Pendiente</span>
+            {% elif user.status == 2 %}
+              <span class="badge badge-sm badge-outline badge-success shrink-0">Activo</span>
+            {% else %}
+              <span class="badge badge-sm badge-outline badge-error shrink-0">Inactivo</span>
+            {% endif %}
+          {% endif %}
+        </div>
+        <p class="text-xs text-base-content/40 mt-0.5 truncate">{{ user.email }}</p>
+        {% if user.cargo %}
+          <p class="text-xs text-base-content/30 mt-0.5">{{ user.cargo }}</p>
+        {% endif %}
+        <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+          {% if user.company %}
+            <span class="badge badge-xs badge-outline">{{ user.company|upper }}</span>
+          {% endif %}
+          {% if user.rut %}
+            <span class="text-[10px] text-base-content/40 font-mono">{{ user.rut }}</span>
+          {% endif %}
+          {% if user.phone %}
+            <span class="text-[10px] text-base-content/40">{{ user.phone }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% if user.device %}
+    <div class="mt-3 pt-3 border-t border-base-200">
+      <p class="text-xs text-base-content/50">Dispositivo: <span class="text-base-content font-medium">{{ user.device.manufacturer }} {{ user.device.model }}</span></p>
+      {% if user.device.android_id %}
+      <p class="text-[10px] text-base-content/40 mt-0.5 font-mono">ID {{ user.device.android_id|slice:":8" }}…</p>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="flex items-center justify-between mt-3 pt-3 border-t border-base-200">
+      {% if is_manager %}
+      <form method="post" action="{% url 'manager:technician_toggle' user.pk %}" class="inline-block">
+        {% csrf_token %}
+        {% if user.status == 1 %}
+        <select name="status" onchange="this.form.submit()"
+                style="-webkit-appearance:none;-moz-appearance:none;appearance:none;
+                       border:1px solid #d97706;border-radius:9999px;
+                       padding:1px 8px;font-size:11px;font-weight:500;
+                       cursor:pointer;height:22px;line-height:1.2;outline:none;
+                       background:transparent;color:#d97706;text-align:center;text-align-last:center;">
+          <option value="active">Activo</option>
+          <option value="pending" selected>Pendiente</option>
+          <option value="inactive">Inactivo</option>
+        </select>
+        {% elif user.status == 2 %}
+        <select name="status" onchange="this.form.submit()"
+                style="-webkit-appearance:none;-moz-appearance:none;appearance:none;
+                       border:1px solid #16a34a;border-radius:9999px;
+                       padding:1px 8px;font-size:11px;font-weight:500;
+                       cursor:pointer;height:22px;line-height:1.2;outline:none;
+                       background:transparent;color:#16a34a;text-align:center;text-align-last:center;">
+          <option value="active" selected>Activo</option>
+          <option value="pending">Pendiente</option>
+          <option value="inactive">Inactivo</option>
+        </select>
+        {% else %}
+        <select name="status" onchange="this.form.submit()"
+                style="-webkit-appearance:none;-moz-appearance:none;appearance:none;
+                       border:1px solid #dc2626;border-radius:9999px;
+                       padding:1px 8px;font-size:11px;font-weight:500;
+                       cursor:pointer;height:22px;line-height:1.2;outline:none;
+                       background:transparent;color:#dc2626;text-align:center;text-align-last:center;">
+          <option value="active">Activo</option>
+          <option value="pending">Pendiente</option>
+          <option value="inactive" selected>Inactivo</option>
+        </select>
+        {% endif %}
+      </form>
+      {% else %}
+      <span></span>
+      {% endif %}
+      <div class="flex items-center gap-0.5">
+        <button type="button" class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity"
+                onclick="showTechnicianModal(this)"
+                data-name="{{ user.get_full_name|default:'—'|escape }}"
+                data-email="{{ user.email|escape }}"
+                data-rut="{{ user.rut|default:'—' }}"
+                data-phone="{{ user.phone|default:'—' }}"
+                data-cargo="{{ user.cargo|default:'—' }}"
+                data-company="{{ user.company|upper|default:'—' }}"
+                data-status="{% if user.status == 1 %}Pendiente{% elif user.status == 2 %}Activo{% else %}Inactivo{% endif %}"
+                data-avatar="{% if user.profile_photo and user.profile_photo.image %}{{ user.profile_photo.image.url }}{% endif %}"
+                data-initials="{{ user.get_full_name|default:user.email|initials }}"
+                data-device-manufacturer="{{ user.device.manufacturer|default:'' }}"
+                data-device-model="{{ user.device.model|default:'' }}"
+                data-device-fingerprint="{{ user.device.fingerprint|default:'' }}"
+                data-device-android-id="{{ user.device.android_id|default:'' }}"
+                data-device-os="{{ user.device.os_version|default:'' }}"
+                data-device-registered="{{ user.device.registered_at|date:'d/m/Y H:i'|default:'' }}"
+                data-authorized-by="{% if user.status_changed_by %}{{ user.status_changed_by.get_full_name|default:user.status_changed_by.email|escape }}{% endif %}"
+                data-authorized-at="{{ user.status_changed_at|date:'d/m/Y H:i'|default:'' }}"
+                data-date-joined="{{ user.date_joined|date:'d/m/Y H:i' }}"
+                data-last-login="{{ user.last_login|date:'d/m/Y H:i'|default:'—' }}"
+                title="Ver información">
+          <i class="fa-solid fa-circle-info"></i>
+        </button>
+        {% if is_manager %}
+        <a href="{% url 'manager:technician_edit' user.pk %}"
+           class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+          <i class="fa-solid fa-pen"></i>
+        </a>
+        <a href="{% url 'manager:technician_delete' user.pk %}"
+           class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar">
+          <i class="fa-solid fa-trash-can"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Desktop: table -->
+<div class="hidden md:block bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Técnico</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Empresa</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">RUT</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Teléfono</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Dispositivo</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-center">Estado</th>
+          {% if is_manager %}
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide"></th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr class="hover:bg-primary/5 transition-colors">
+          <td class="py-3.5">
+            <div class="flex items-center gap-3">
+              {% if user.profile_photo and user.profile_photo.image %}
+              <div class="w-12 h-12 rounded-full bg-cover bg-center shrink-0" style="background-image:url('{{ user.profile_photo.image.url }}');"></div>
+              {% else %}
+              <div class="w-12 h-12 rounded-full bg-info/10 flex items-center justify-center shrink-0">
+                <span class="text-info text-sm font-bold">{{ user.get_full_name|default:user.email|initials }}</span>
+              </div>
+              {% endif %}
+              <div>
+                <p class="text-sm font-medium text-base-content">{{ user.get_full_name|default:"—" }}</p>
+                <p class="text-xs text-base-content/40 mt-0.5">{{ user.email }}</p>
+                {% if user.cargo %}
+                  <p class="text-xs text-base-content/30">{{ user.cargo }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td class="py-3.5">
+            {% if user.company %}
+              <span class="badge badge-sm badge-outline">{{ user.company|upper }}</span>
+            {% else %}
+              <span class="text-base-content/30 text-xs">—</span>
+            {% endif %}
+          </td>
+          <td class="py-3.5 font-mono text-sm text-base-content/60">
+            {{ user.rut|default:"—" }}
+          </td>
+          <td class="py-3.5 text-sm text-base-content/60">
+            {{ user.phone|default:"—" }}
+          </td>
+          <td class="py-3.5">
+            {% if user.device %}
+              <p class="text-xs font-medium text-base-content">{{ user.device.manufacturer }} {{ user.device.model }}</p>
+              {% if user.device.android_id %}
+              <p class="text-xs text-base-content/40 mt-0.5 font-mono">{{ user.device.android_id|slice:":8" }}…</p>
+              {% endif %}
+            {% else %}
+              <span class="text-xs text-base-content/30">Sin dispositivo</span>
+            {% endif %}
+          </td>
+          <td class="py-3.5 text-center">
+            {% if is_manager %}
+            <form method="post" action="{% url 'manager:technician_toggle' user.pk %}" class="inline-block">
+              {% csrf_token %}
+              {% if user.status == 1 %}
+              <select name="status" onchange="this.form.submit()"
+                      style="-webkit-appearance:none;-moz-appearance:none;appearance:none;
+                             border:1px solid #d97706;border-radius:9999px;
+                             padding:1px 8px;font-size:11px;font-weight:500;
+                             cursor:pointer;height:22px;line-height:1.2;outline:none;
+                             background:transparent;color:#d97706;text-align:center;text-align-last:center;">
+                <option value="active">Activo</option>
+                <option value="pending" selected>Pendiente</option>
+                <option value="inactive">Inactivo</option>
+              </select>
+              {% elif user.status == 2 %}
+              <select name="status" onchange="this.form.submit()"
+                      style="-webkit-appearance:none;-moz-appearance:none;appearance:none;
+                             border:1px solid #16a34a;border-radius:9999px;
+                             padding:1px 8px;font-size:11px;font-weight:500;
+                             cursor:pointer;height:22px;line-height:1.2;outline:none;
+                             background:transparent;color:#16a34a;text-align:center;text-align-last:center;">
+                <option value="active" selected>Activo</option>
+                <option value="pending">Pendiente</option>
+                <option value="inactive">Inactivo</option>
+              </select>
+              {% else %}
+              <select name="status" onchange="this.form.submit()"
+                      style="-webkit-appearance:none;-moz-appearance:none;appearance:none;
+                             border:1px solid #dc2626;border-radius:9999px;
+                             padding:1px 8px;font-size:11px;font-weight:500;
+                             cursor:pointer;height:22px;line-height:1.2;outline:none;
+                             background:transparent;color:#dc2626;text-align:center;text-align-last:center;">
+                <option value="active">Activo</option>
+                <option value="pending">Pendiente</option>
+                <option value="inactive" selected>Inactivo</option>
+              </select>
+              {% endif %}
+            </form>
+            {% else %}
+              {% if user.status == 1 %}
+                <span class="badge badge-sm badge-outline badge-warning">Pendiente</span>
+              {% elif user.status == 2 %}
+                <span class="badge badge-sm badge-outline badge-success">Activo</span>
+              {% else %}
+                <span class="badge badge-sm badge-outline badge-error">Inactivo</span>
+              {% endif %}
+            {% endif %}
+          </td>
+          {% if is_manager %}
+          <td class="py-3.5 text-right whitespace-nowrap">
+            <button type="button" class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity"
+                    onclick="showTechnicianModal(this)"
+                    data-name="{{ user.get_full_name|default:'—'|escape }}"
+                    data-email="{{ user.email|escape }}"
+                    data-rut="{{ user.rut|default:'—' }}"
+                    data-phone="{{ user.phone|default:'—' }}"
+                    data-cargo="{{ user.cargo|default:'—' }}"
+                    data-company="{{ user.company|upper|default:'—' }}"
+                    data-status="{% if user.status == 1 %}Pendiente{% elif user.status == 2 %}Activo{% else %}Inactivo{% endif %}"
+                    data-avatar="{% if user.profile_photo and user.profile_photo.image %}{{ user.profile_photo.image.url }}{% endif %}"
+                    data-initials="{{ user.get_full_name|default:user.email|initials }}"
+                    data-device-manufacturer="{{ user.device.manufacturer|default:'' }}"
+                    data-device-model="{{ user.device.model|default:'' }}"
+                    data-device-fingerprint="{{ user.device.fingerprint|default:'' }}"
+                    data-device-android-id="{{ user.device.android_id|default:'' }}"
+                    data-device-os="{{ user.device.os_version|default:'' }}"
+                    data-device-registered="{{ user.device.registered_at|date:'d/m/Y H:i'|default:'' }}"
+                    data-authorized-by="{% if user.status_changed_by %}{{ user.status_changed_by.get_full_name|default:user.status_changed_by.email|escape }}{% endif %}"
+                    data-authorized-at="{{ user.status_changed_at|date:'d/m/Y H:i'|default:'' }}"
+                    data-date-joined="{{ user.date_joined|date:'d/m/Y H:i' }}"
+                    data-last-login="{{ user.last_login|date:'d/m/Y H:i'|default:'—' }}"
+                    title="Ver información">
+              <i class="fa-solid fa-circle-info"></i>
+            </button>
+            <a href="{% url 'manager:technician_edit' user.pk %}"
+               class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+              <i class="fa-solid fa-pen"></i>
+            </a>
+            <a href="{% url 'manager:technician_delete' user.pk %}"
+               class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar">
+              <i class="fa-solid fa-trash-can"></i>
+            </a>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="flex justify-center items-center mt-6 gap-2">
+  {% if page_obj.has_previous %}
+    <a href="?q={{ q }}&page={{ page_obj.previous_page_number }}"
+       class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0">‹</a>
+  {% endif %}
+  <span class="text-sm text-base-content/50 px-3">
+    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+  </span>
+  {% if page_obj.has_next %}
+    <a href="?q={{ q }}&page={{ page_obj.next_page_number }}"
+       class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0">›</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs">
+  <div class="flex flex-col items-center justify-center py-20 px-8 text-center">
+    <div class="w-12 h-12 rounded-2xl bg-base-200 flex items-center justify-center mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </div>
+    <p class="text-sm font-medium text-base-content/40">
+      {% if q %}No se encontraron técnicos{% else %}Sin técnicos registrados{% endif %}
+    </p>
+    {% if is_manager and not q %}
+      <a href="{% url 'manager:technician_create' %}" class="btn btn-success btn-sm mt-4 text-xs font-semibold">+ Agregar técnico</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Technician info modal -->
+<dialog id="technician-modal" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="flex items-center gap-4 p-6 pb-4">
+      <div id="modal-avatar" class="w-16 h-16 rounded-full bg-info/10 flex items-center justify-center shrink-0">
+        <span id="modal-initials" class="text-info text-xl font-bold"></span>
+      </div>
+      <div class="min-w-0">
+        <h3 id="modal-name" class="text-lg font-bold text-base-content truncate"></h3>
+        <p id="modal-email" class="text-xs text-base-content/50 truncate mt-0.5"></p>
+        <p id="modal-status" class="mt-1"></p>
+      </div>
+    </div>
+    <div class="px-6 pb-6 space-y-3">
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div><span class="text-base-content/40 text-xs">RUT</span><p id="modal-rut" class="text-base-content font-medium">—</p></div>
+        <div><span class="text-base-content/40 text-xs">Teléfono</span><p id="modal-phone" class="text-base-content font-medium">—</p></div>
+        <div><span class="text-base-content/40 text-xs">Cargo</span><p id="modal-cargo" class="text-base-content font-medium">—</p></div>
+        <div><span class="text-base-content/40 text-xs">Empresa</span><p id="modal-company" class="text-base-content font-medium">—</p></div>
+      </div>
+      <div class="border-t border-base-200 pt-3">
+        <p class="text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">Dispositivo</p>
+        <div id="modal-device-info" class="text-sm text-base-content space-y-1">
+          <p id="modal-device-empty" class="text-base-content/40 text-xs">Sin dispositivo registrado</p>
+          <div id="modal-device-details" class="hidden space-y-1">
+            <p><span class="text-base-content/40">Modelo:</span> <span id="modal-device-model" class="font-medium"></span></p>
+            <p><span class="text-base-content/40">Android ID:</span> <span id="modal-device-android-id" class="font-mono text-xs break-all"></span></p>
+            <p><span class="text-base-content/40">Fingerprint:</span> <span id="modal-device-fingerprint" class="font-mono text-xs break-all"></span></p>
+            <p><span class="text-base-content/40">OS:</span> <span id="modal-device-os"></span></p>
+            <p><span class="text-base-content/40">Registrado:</span> <span id="modal-device-registered"></span></p>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-base-200 pt-3 grid grid-cols-2 gap-3 text-sm">
+        <div><span class="text-base-content/40 text-xs">Cuenta creada</span><p id="modal-date-joined" class="text-base-content font-medium text-xs">—</p></div>
+        <div><span class="text-base-content/40 text-xs">Último acceso</span><p id="modal-last-login" class="text-base-content font-medium text-xs">—</p></div>
+      </div>
+      <div id="modal-authorized-wrap" class="hidden border-t border-base-200 pt-3">
+        <p class="flex items-center gap-1.5 text-xs text-base-content/40">
+          <i class="fa-solid fa-user-check shrink-0"></i>
+          Autorizado por
+          <span id="modal-authorized-by" class="font-medium text-base-content/60"></span>
+          <span id="modal-authorized-at" class="text-base-content/30"></span>
+        </p>
+      </div>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+function showTechnicianModal(btn) {
+  var d = btn.dataset;
+  var m = document.getElementById('technician-modal');
+
+  document.getElementById('modal-name').textContent = d.name;
+  document.getElementById('modal-email').textContent = d.email;
+  document.getElementById('modal-rut').textContent = d.rut;
+  document.getElementById('modal-phone').textContent = d.phone;
+  document.getElementById('modal-cargo').textContent = d.cargo;
+  document.getElementById('modal-company').textContent = d.company;
+  document.getElementById('modal-date-joined').textContent = d.dateJoined;
+  document.getElementById('modal-last-login').textContent = d.lastLogin;
+
+  var authorizedWrap = document.getElementById('modal-authorized-wrap');
+  if (d.authorizedBy) {
+    document.getElementById('modal-authorized-by').textContent = d.authorizedBy;
+    document.getElementById('modal-authorized-at').textContent = d.authorizedAt ? '· ' + d.authorizedAt : '';
+    authorizedWrap.classList.remove('hidden');
+  } else {
+    authorizedWrap.classList.add('hidden');
+  }
+
+  var statusEl = document.getElementById('modal-status');
+  var status = d.status;
+  if (status === 'Activo') {
+    statusEl.innerHTML = '<span class="badge badge-sm badge-outline badge-success">Activo</span>';
+  } else if (status === 'Pendiente') {
+    statusEl.innerHTML = '<span class="badge badge-sm badge-outline badge-warning">Pendiente</span>';
+  } else {
+    statusEl.innerHTML = '<span class="badge badge-sm badge-outline badge-error">Inactivo</span>';
+  }
+
+  if (d.avatar) {
+    document.getElementById('modal-avatar').style.backgroundImage = "url('" + d.avatar + "')";
+    document.getElementById('modal-avatar').style.backgroundSize = 'cover';
+    document.getElementById('modal-avatar').style.backgroundPosition = 'center';
+    document.getElementById('modal-initials').style.display = 'none';
+  } else {
+    document.getElementById('modal-avatar').style.backgroundImage = '';
+    document.getElementById('modal-avatar').style.backgroundSize = '';
+    document.getElementById('modal-avatar').style.backgroundPosition = '';
+    document.getElementById('modal-initials').style.display = '';
+    document.getElementById('modal-initials').textContent = d.initials;
+  }
+
+  if (d.deviceManufacturer) {
+    document.getElementById('modal-device-empty').classList.add('hidden');
+    document.getElementById('modal-device-details').classList.remove('hidden');
+    document.getElementById('modal-device-model').textContent = d.deviceManufacturer + ' ' + d.deviceModel;
+    document.getElementById('modal-device-android-id').textContent = d.deviceAndroidId || '—';
+    document.getElementById('modal-device-fingerprint').textContent = d.deviceFingerprint;
+    document.getElementById('modal-device-os').textContent = d.deviceOs || '—';
+    document.getElementById('modal-device-registered').textContent = d.deviceRegistered || '—';
+  } else {
+    document.getElementById('modal-device-empty').classList.remove('hidden');
+    document.getElementById('modal-device-details').classList.add('hidden');
+  }
+
+  m.showModal();
+}
+</script>
+
+{% endblock %}

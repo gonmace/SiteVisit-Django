@@ -1,0 +1,222 @@
+{% extends "manager/base.html" %}
+{% block title %}{% if is_edit %}Editar Servicio #{{ visit.pk }}{% else %}Nueva Visita{% endif %}{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-bold text-base-content tracking-tight">
+      {% if is_edit %}Editar Servicio #{{ visit.pk }}{% else %}Nueva Visita{% endif %}
+    </h1>
+    {% if not is_edit %}
+      {% if request.user.role == 'super_manager' %}
+      <p class="text-xs text-base-content/40 mt-0.5">Como manager, el servicio se aprueba automáticamente al crearlo.</p>
+      {% else %}
+      <p class="text-xs text-base-content/40 mt-0.5">El servicio quedará pendiente de aprobación del manager antes de asignarse al técnico.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+  <a href="{% url 'manager:visits_approval' %}" class="btn btn-ghost btn-sm h-9 min-h-0 text-base-content/50">
+    <i class="fa-solid fa-arrow-left text-xs"></i>
+    Volver
+  </a>
+</div>
+
+<form method="post" class="max-w-2xl" id="visit-form"
+      {% if is_edit %}action="{% url 'manager:visit_edit' visit.pk %}"{% endif %}>
+  {% csrf_token %}
+
+  <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs divide-y divide-base-200">
+
+    <!-- Técnico -->
+    <div class="p-5">
+      <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
+        Técnico *
+      </label>
+      <select name="technician"
+              class="select select-bordered w-full text-sm {% if errors.technician %}select-error{% endif %}">
+        <option value="" disabled {% if not post.technician %}selected{% endif %}>Seleccionar técnico…</option>
+        {% for tech in technicians %}
+          <option value="{{ tech.pk }}" {% if post.technician == tech.pk|stringformat:"s" %}selected{% endif %}>
+            {{ tech.get_full_name|default:tech.email }} — {{ tech.company|upper }} — {{ tech.cargo }}
+          </option>
+        {% empty %}
+          <option disabled>No hay técnicos activos disponibles</option>
+        {% endfor %}
+      </select>
+      {% if errors.technician %}
+        <p class="text-error text-xs mt-1">{{ errors.technician }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Sitio — buscador live -->
+    <div class="p-5">
+      <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
+        Sitio *
+      </label>
+      <input type="hidden" name="site" id="site-id" value="{{ post.site }}">
+
+      <!-- Search input -->
+      <div class="relative">
+        <div class="flex items-center gap-2 input input-bordered w-full px-3
+                    {% if errors.site %}border-error{% endif %}"
+             style="height:auto; padding-top:0; padding-bottom:0;">
+          <i class="fa-solid fa-magnifying-glass text-base-content/30 text-xs shrink-0"></i>
+          <input type="text" id="site-search"
+                 placeholder="Escribe al menos 3 caracteres…"
+                 autocomplete="off"
+                 class="flex-1 bg-transparent outline-none text-sm py-2.5 text-base-content placeholder:text-base-content/30">
+          <button type="button" id="site-clear"
+                  class="shrink-0 text-base-content/30 hover:text-base-content hidden"
+                  title="Limpiar selección">
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Dropdown results -->
+        <ul id="site-results"
+            class="hidden absolute z-50 w-full mt-1 bg-base-100 border border-base-300 rounded-xl shadow-lg overflow-hidden max-h-56 overflow-y-auto">
+        </ul>
+      </div>
+
+      {% if errors.site %}
+        <p class="text-error text-xs mt-1">{{ errors.site }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Fecha programada -->
+    <div class="p-5">
+      <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
+        Fecha programada *
+      </label>
+      <input type="date" name="scheduled_date"
+             value="{{ post.scheduled_date }}"
+             class="input input-bordered w-full text-sm {% if errors.scheduled_date %}input-error{% endif %}">
+      {% if errors.scheduled_date %}
+        <p class="text-error text-xs mt-1">{{ errors.scheduled_date }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Objetivo -->
+    <div class="p-5">
+      <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
+        Objetivo *
+      </label>
+      <textarea name="reason" rows="4"
+                placeholder="Descripción del trabajo a realizar…"
+                class="textarea textarea-bordered w-full text-sm resize-none {% if errors.reason %}textarea-error{% endif %}">{{ post.reason }}</textarea>
+      {% if errors.reason %}
+        <p class="text-error text-xs mt-1">{{ errors.reason }}</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Actions -->
+  <div class="flex items-center justify-end gap-3 mt-5">
+    <a href="{% url 'manager:visits_approval' %}" class="btn btn-ghost btn-sm h-9 min-h-0">Cancelar</a>
+    <button type="submit" class="btn btn-primary btn-sm h-9 min-h-0">
+      <i class="fa-solid fa-paper-plane text-xs"></i>
+      {% if is_edit %}Guardar cambios{% elif request.user.role == 'super_manager' %}Crear y aprobar{% else %}Enviar para aprobación{% endif %}
+    </button>
+  </div>
+</form>
+
+<script>
+(function () {
+  const searchInput  = document.getElementById('site-search');
+  const siteIdInput  = document.getElementById('site-id');
+  const resultsList  = document.getElementById('site-results');
+  const clearBtn     = document.getElementById('site-clear');
+  const searchUrl    = '{% url "manager:sites_search" %}';
+
+  let debounceTimer  = null;
+  let selectedSite   = null;
+
+  // Restore selected site (edit mode or validation error)
+  {% if initial_site %}
+  selectSite({ id: '{{ initial_site.id }}', code: '{{ initial_site.code|escapejs }}', name: '{{ initial_site.name|escapejs }}' });
+  {% elif post.site and post.site_name %}
+  selectSite({ id: '{{ post.site }}', code: '{{ post.site_code|escapejs }}', name: '{{ post.site_name|escapejs }}' });
+  {% endif %}
+
+  searchInput.addEventListener('input', function () {
+    const q = this.value.trim();
+    clearTimeout(debounceTimer);
+    if (selectedSite && this.value !== selectedSite.label) {
+      clearSelection(false);
+    }
+    if (q.length < 3) { hideResults(); return; }
+    debounceTimer = setTimeout(() => fetchSites(q), 250);
+  });
+
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { hideResults(); }
+  });
+
+  clearBtn.addEventListener('click', function () {
+    clearSelection(true);
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#site-search') && !e.target.closest('#site-results')) {
+      hideResults();
+    }
+  });
+
+  function fetchSites(q) {
+    fetch(searchUrl + '?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+      .then(r => {
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      })
+      .then(sites => renderResults(sites))
+      .catch(() => {
+        resultsList.innerHTML = '<li class="px-4 py-3 text-sm text-error/70">Error al buscar sitios</li>';
+        showResults();
+      });
+  }
+
+  function renderResults(sites) {
+    resultsList.innerHTML = '';
+    if (!sites.length) {
+      resultsList.innerHTML = '<li class="px-4 py-3 text-sm text-base-content/40">Sin resultados</li>';
+      showResults();
+      return;
+    }
+    sites.forEach(site => {
+      const li = document.createElement('li');
+      li.className = 'flex items-center gap-3 px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors border-b border-base-200 last:border-0';
+      li.innerHTML = `
+        <span class="inline-flex items-center px-2 py-0.5 rounded bg-primary/10 text-primary font-mono text-xs font-semibold shrink-0">${site.code}</span>
+        ${site.operator_code ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-base-200 text-base-content/50 font-mono text-xs shrink-0">${site.operator_code}</span>` : ''}
+        <span class="text-sm text-base-content truncate">${site.name}</span>`;
+      li.addEventListener('click', () => selectSite(site));
+      resultsList.appendChild(li);
+    });
+    showResults();
+  }
+
+  function selectSite(site) {
+    selectedSite = { ...site, label: `${site.code} — ${site.name}` };
+    siteIdInput.value  = site.id;
+    searchInput.value  = selectedSite.label;
+    clearBtn.classList.remove('hidden');
+    hideResults();
+  }
+
+  function clearSelection(focusInput) {
+    selectedSite       = null;
+    siteIdInput.value  = '';
+    searchInput.value  = '';
+    clearBtn.classList.add('hidden');
+    if (focusInput) searchInput.focus();
+  }
+
+  function showResults() { resultsList.classList.remove('hidden'); }
+  function hideResults()  { resultsList.classList.add('hidden'); }
+})();
+</script>
+
+{% endblock %}

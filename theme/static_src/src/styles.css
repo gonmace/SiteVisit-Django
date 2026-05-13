@@ -1,0 +1,269 @@
+﻿@import "tailwindcss";
+@source not "../static";
+@source "../../../templates";
+@source "../../../home";
+@source "../../../users";
+@source "../../../sites";
+@source "../../../visits";
+@source "../../../dashboard";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
+@plugin "daisyui" {
+  themes: light --default, dark;
+}
+
+/* Light theme */
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: #ffffff;
+  --color-base-200: #f2f2f7;
+  --color-base-300: #e5e5ea;
+  --color-base-content: #1c1c1e;
+  --color-primary: #e60000;
+  --color-primary-content: #ffffff;
+  --color-secondary: #4a4d4e;
+  --color-secondary-content: #ffffff;
+  --color-accent: #4f46e5;
+  --color-accent-content: #ffffff;
+  --color-neutral: #727576;
+  --color-neutral-content: #ffffff;
+  --color-info: #0284c7;
+  --color-info-content: #ffffff;
+  --color-success: #16a34a;
+  --color-success-content: #ffffff;
+  --color-warning: #d97706;
+  --color-warning-content: #ffffff;
+  --color-error: #b91c1c;
+  --color-error-content: #ffffff;
+  --color-edit:           #eab308;
+  --color-edit-content:   #fff;
+  --color-delete:         #ea580c;
+  --color-delete-content: #fff;
+  --color-view:           #3b82f6;
+  --color-view-content:   #fff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.625rem;
+  --radius-box: 0.875rem;
+  --radius-badge: 0.375rem;
+}
+
+/* Dark theme */
+@plugin "daisyui/theme" {
+  name: "dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+  --color-base-100: #1c1c1e;
+  --color-base-200: #2c2c2e;
+  --color-base-300: #3a3a3c;
+  --color-base-content: #f2f2f7;
+  --color-primary: #ff3b30;
+  --color-primary-content: #ffffff;
+  --color-secondary: #8e8e93;
+  --color-secondary-content: #ffffff;
+  --color-accent: #818cf8;
+  --color-accent-content: #ffffff;
+  --color-neutral: #636366;
+  --color-neutral-content: #ffffff;
+  --color-info: #38bdf8;
+  --color-info-content: #ffffff;
+  --color-success: #34d399;
+  --color-success-content: #ffffff;
+  --color-warning: #fbbf24;
+  --color-warning-content: #1c1c1e;
+  --color-error: #f87171;
+  --color-error-content: #1c1c1e;
+  --color-edit:#facc15;
+  --color-edit-content: #000;
+  --color-delete:#fb923c;
+  --color-delete-content: #fff;
+  --color-view: #60a5fa;
+  --color-view-content:   #fff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.625rem;
+  --radius-box: 0.875rem;
+  --radius-badge: 0.375rem;
+}
+
+
+/* Nunito + antialiasing */
+html {
+  font-family: 'Nunito', -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Registrar colores custom como utilidades Tailwind (text-edit, text-delete, text-view) */
+@theme {
+  --color-edit:   #eab308;
+  --color-delete: #ea580c;
+  --color-view:   #3b82f6;
+}
+
+/* Tabla — DaisyUI v5 elimina bordes por defecto */
+@layer components {
+  .table thead tr {
+    background-color: var(--color-base-200);
+  }
+  .table thead th {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--color-base-300);
+  }
+  .table tbody tr {
+    border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 7%, transparent);
+  }
+  .table tbody tr:last-child { border-bottom: none; }
+}
+
+/* ======================================================================
+   BOTONES: fondo 18% + borde 30% + texto full color + sombra suave
+   Fuera de @layer para ganarle al plugin DaisyUI.
+   ====================================================================== */
+
+.btn-primary {
+  background-color: color-mix(in srgb, var(--color-primary) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+  color:            var(--color-primary) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
+}
+.btn-primary:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 28%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-primary) 40%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-primary) 22%, transparent) !important;
+}
+
+.btn-secondary {
+  background-color: color-mix(in srgb, var(--color-secondary) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-secondary) 30%, transparent) !important;
+  color:            var(--color-secondary) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-secondary) 15%, transparent) !important;
+}
+.btn-secondary:hover {
+  background-color: color-mix(in srgb, var(--color-secondary) 28%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-secondary) 40%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-secondary) 22%, transparent) !important;
+}
+
+.btn-success {
+  background-color: color-mix(in srgb, var(--color-success) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-success) 30%, transparent) !important;
+  color:            var(--color-success) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-success) 15%, transparent) !important;
+}
+.btn-success:hover {
+  background-color: color-mix(in srgb, var(--color-success) 28%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-success) 40%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-success) 22%, transparent) !important;
+}
+
+.btn-error {
+  background-color: color-mix(in srgb, var(--color-error) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-error) 30%, transparent) !important;
+  color:            var(--color-error) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-error) 15%, transparent) !important;
+}
+.btn-error:hover {
+  background-color: color-mix(in srgb, var(--color-error) 28%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-error) 40%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-error) 22%, transparent) !important;
+}
+
+.btn-warning {
+  background-color: color-mix(in srgb, var(--color-warning) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-warning) 30%, transparent) !important;
+  color:            var(--color-warning) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-warning) 15%, transparent) !important;
+}
+.btn-warning:hover {
+  background-color: color-mix(in srgb, var(--color-warning) 28%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-warning) 40%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-warning) 22%, transparent) !important;
+}
+
+.btn-info {
+  background-color: color-mix(in srgb, var(--color-info) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-info) 30%, transparent) !important;
+  color:            var(--color-info) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-info) 15%, transparent) !important;
+}
+.btn-info:hover {
+  background-color: color-mix(in srgb, var(--color-info) 28%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-info) 40%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-info) 22%, transparent) !important;
+}
+
+.btn-accent {
+  background-color: color-mix(in srgb, var(--color-accent) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-accent) 30%, transparent) !important;
+  color:            var(--color-accent) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-accent) 15%, transparent) !important;
+}
+.btn-accent:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 28%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-accent) 40%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-accent) 22%, transparent) !important;
+}
+
+.btn-neutral {
+  background-color: color-mix(in srgb, var(--color-neutral) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-neutral) 30%, transparent) !important;
+  color:            var(--color-neutral) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-neutral) 15%, transparent) !important;
+}
+.btn-neutral:hover {
+  background-color: color-mix(in srgb, var(--color-neutral) 28%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-neutral) 40%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-neutral) 22%, transparent) !important;
+}
+
+.btn-edit {
+  background-color: color-mix(in srgb, var(--color-edit) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-edit) 30%, transparent) !important;
+  color:            var(--color-edit) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-edit) 15%, transparent) !important;
+}
+.btn-edit:hover {
+  background-color: color-mix(in srgb, var(--color-edit) 28%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-edit) 22%, transparent) !important;
+}
+
+.btn-delete {
+  background-color: color-mix(in srgb, var(--color-delete) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-delete) 30%, transparent) !important;
+  color:            var(--color-delete) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-delete) 15%, transparent) !important;
+}
+.btn-delete:hover {
+  background-color: color-mix(in srgb, var(--color-delete) 28%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-delete) 22%, transparent) !important;
+}
+
+.btn-view {
+  background-color: color-mix(in srgb, var(--color-view) 18%, transparent) !important;
+  border-color:     color-mix(in srgb, var(--color-view) 30%, transparent) !important;
+  color:            var(--color-view) !important;
+  box-shadow:       0 1px 6px color-mix(in srgb, var(--color-view) 15%, transparent) !important;
+}
+.btn-view:hover {
+  background-color: color-mix(in srgb, var(--color-view) 28%, transparent) !important;
+  box-shadow:       0 2px 8px color-mix(in srgb, var(--color-view) 22%, transparent) !important;
+}
+
+/* Compatibilidad input-bordered (DaisyUI v4 -> v5) */
+.input-bordered,
+.textarea-bordered,
+.select-bordered,
+.file-input-bordered {
+  border: 1px solid color-mix(in oklab, var(--color-base-content) 20%, transparent);
+}
+.input-bordered:focus,
+.input-bordered:focus-within,
+.textarea-bordered:focus,
+.select-bordered:focus {
+  border-color: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  outline: none;
+}

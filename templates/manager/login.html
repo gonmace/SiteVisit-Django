@@ -1,0 +1,110 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso — SiteVisit</title>
+  {% tailwind_css %}
+  <style>
+    .field-group {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.09);
+      overflow: hidden;
+    }
+    .field-row {
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      height: 50px;
+      gap: 10px;
+    }
+    .field-row + .field-row {
+      border-top: 1px solid rgba(0,0,0,0.07);
+    }
+    .field-row label {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: #4a4d4e;
+      min-width: 84px;
+      flex-shrink: 0;
+    }
+    .field-row input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      color: #1c1c1e;
+      background: transparent;
+      font-family: inherit;
+    }
+    .field-row input::placeholder { color: #c7c7cc; }
+  </style>
+</head>
+<body style="min-height:100vh; display:flex; align-items:center; justify-content:center;
+             padding:24px; background:#f2f2f7; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;
+             -webkit-font-smoothing:antialiased;">
+
+  <div style="width:100%; max-width:340px; display:flex; flex-direction:column; gap:24px;">
+
+    <!-- Icon + title -->
+    <div style="text-align:center;">
+      <div style="width:72px; height:72px; border-radius:18px; background:#e60000;
+                  display:flex; align-items:center; justify-content:center;
+                  margin:0 auto 14px; box-shadow:0 4px 16px rgba(230,0,0,0.25);">
+        <span style="font-size:28px; font-weight:900; color:#fff; letter-spacing:-1px;">SV</span>
+      </div>
+      <p style="font-size:22px; font-weight:700; color:#1c1c1e; margin:0; letter-spacing:-0.4px;">SiteVisit</p>
+      <p style="font-size:13px; color:#8e8e93; margin:5px 0 0;">Portal Manager</p>
+    </div>
+
+    <!-- Error -->
+    {% if form.errors %}
+      <div style="background:#fff2f2; border:1px solid rgba(220,38,38,0.2); border-radius:10px;
+                  padding:10px 14px; font-size:13.5px; color:#dc2626; text-align:center;">
+        Credenciales incorrectas. Verifica tu email y contraseña.
+      </div>
+    {% endif %}
+
+    <!-- Form -->
+    <form method="post" style="display:flex; flex-direction:column; gap:14px;">
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+      <div class="field-group">
+        <div class="field-row">
+          <label for="id_username">Email</label>
+          <input type="email" name="username" id="id_username"
+                 placeholder="tu@empresa.com" autofocus required
+                 value="{{ form.username.value|default:'' }}">
+        </div>
+        <div class="field-row">
+          <label for="id_password">Contraseña</label>
+          <input type="password" name="password" id="id_password"
+                 placeholder="••••••••" required>
+        </div>
+      </div>
+
+      <button type="submit"
+              style="display:block; width:100%; height:50px; border-radius:12px; border:none;
+                     font-size:16px; font-weight:600; font-family:inherit; color:#fff;
+                     background:#e60000; cursor:pointer; letter-spacing:-0.1px;
+                     transition:opacity 0.15s; box-shadow:0 2px 8px rgba(230,0,0,0.2);"
+              onmousedown="this.style.opacity='0.82'" onmouseup="this.style.opacity='1'"
+              onmouseleave="this.style.opacity='1'">
+        Entrar
+      </button>
+    </form>
+
+    <p style="text-align:center; font-size:12px; color:#c7c7cc;">
+      Phoenix International · SiteVisit
+    </p>
+  </div>
+
+  {% if debug %}
+    {% url 'django_browser_reload:reload' as reload_url %}
+    <script src="{{ reload_url }}" defer></script>
+  {% endif %}
+</body>
+</html>
