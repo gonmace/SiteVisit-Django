@@ -41,8 +41,9 @@ class User(AbstractUser):
         verbose_name_plural = 'usuarios'
 
     def save(self, *args, **kwargs):
-        # Sync Django's is_active with status so authentication works correctly
-        self.is_active = (self.status != User.Status.INACTIVE)
+        # Superusers/staff manage their own is_active; only sync for regular users
+        if not self.is_superuser and not self.is_staff:
+            self.is_active = (self.status != User.Status.INACTIVE)
         update_fields = kwargs.get('update_fields')
         if update_fields is not None:
             fields = list(update_fields)
