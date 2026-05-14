@@ -289,6 +289,7 @@ class Command(BaseCommand):
             )
             duration = random.randint(45, 180)
             t_end    = t_start + timedelta(minutes=duration)
+            approved_at = t_start - timedelta(hours=random.randint(2, 48))
             v = Visit.objects.create(
                 technician=tech, site=site, coordinator=coord,
                 status=Visit.Status.COMPLETADA,
@@ -297,8 +298,11 @@ class Command(BaseCommand):
                 hora_inicio_trabajos=t_start,
                 hora_fin_trabajos=t_end,
                 approved_by=super_mgr,
-                approved_at=t_start - timedelta(hours=random.randint(2, 48)),
+                approved_at=approved_at,
                 notas=_note(),
+            )
+            Visit.objects.filter(pk=v.pk).update(
+                created_at=approved_at - timedelta(hours=random.randint(2, 72)),
             )
             _add_tracking(v, site, t_start, t_end)
             total += 1
@@ -310,14 +314,18 @@ class Command(BaseCommand):
             company    = 'wom' if i % 2 == 0 else 'pti'
             tech, site = _pick(company)
             coord      = coord_wom if company == 'wom' else coord_pti
-            Visit.objects.create(
+            approved_at = timezone.now() - timedelta(hours=random.randint(1, 72))
+            v = Visit.objects.create(
                 technician=tech, site=site, coordinator=coord,
                 status=Visit.Status.PROGRAMADA,
                 reason=random.choice(REASONS),
                 scheduled_date=sched,
                 approved_by=super_mgr,
-                approved_at=timezone.now() - timedelta(hours=random.randint(1, 72)),
+                approved_at=approved_at,
                 notas=_note(),
+            )
+            Visit.objects.filter(pk=v.pk).update(
+                created_at=approved_at - timedelta(hours=random.randint(1, 24)),
             )
             total += 1
 
@@ -351,6 +359,7 @@ class Command(BaseCommand):
             t_start  = datetime.combine(today, datetime.min.time()).replace(
                 hour=random.randint(7, 9), minute=random.randint(0, 30), tzinfo=tz,
             )
+            approved_at = t_start - timedelta(hours=2)
             v = Visit.objects.create(
                 technician=tech, site=site, coordinator=coord,
                 status=status,
@@ -358,8 +367,11 @@ class Command(BaseCommand):
                 scheduled_date=today,
                 hora_inicio_trabajos=t_start if needs_start else None,
                 approved_by=super_mgr,
-                approved_at=t_start - timedelta(hours=2),
+                approved_at=approved_at,
                 notas=_note(),
+            )
+            Visit.objects.filter(pk=v.pk).update(
+                created_at=approved_at - timedelta(hours=random.randint(1, 12)),
             )
             route = _make_route(site.latitude, site.longitude, n_pts)
             for j, (event, (lat, lng)) in enumerate(zip(events, route)):
