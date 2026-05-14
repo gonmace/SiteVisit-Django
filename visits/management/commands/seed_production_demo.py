@@ -84,6 +84,8 @@ def _make_route(site_lat: float, site_lng: float, n_points: int = 5):
     """Genera una ruta GPS simulada llegando al sitio."""
     start_lat = site_lat + random.uniform(0.015, 0.035) * random.choice([-1, 1])
     start_lng = site_lng + random.uniform(0.015, 0.035) * random.choice([-1, 1])
+    if n_points == 1:
+        return [(start_lat, start_lng)]
     points = []
     for i in range(n_points):
         frac = i / (n_points - 1)
