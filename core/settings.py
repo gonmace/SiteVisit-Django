@@ -56,7 +56,7 @@ if DEBUG:
     INTERNAL_IPS = ['127.0.0.1', '::1']
     import sys
     if sys.platform == 'win32':
-        NPM_BIN_PATH = r'C:\Program Files\nodejs\npm.cmd'
+        NPM_BIN_PATH = r'C:\Users\gonma\AppData\Roaming\fnm\node-versions\v24.15.0\installation\npm.cmd'
 
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
