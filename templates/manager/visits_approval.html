@@ -4,274 +4,151 @@
 
 {% block content %}
 
-<!-- Tab switcher + Nuevo Servicio -->
-<div class="flex items-center justify-between mb-6">
-  <div class="flex flex-wrap gap-1 bg-base-200 p-1 rounded-xl w-fit">
-    <a href="?tab=planificados"
-       class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
-              {% if tab == 'planificados' %}bg-base-100 shadow-sm text-base-content{% else %}text-base-content/50 hover:text-base-content{% endif %}">
-      Planificados
-      {% if pending_count %}<span class="ml-1 badge badge-warning badge-xs font-semibold">{{ pending_count }}</span>{% endif %}
+<!-- Mobile: tab bar estilo iOS -->
+<div class="sm:hidden -mx-1 border-b border-base-300 mb-3 sticky top-14 z-10 bg-base-100">
+  <div class="flex">
+
+    <a href="?tab=planificados&q={{ site_q }}"
+       class="flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors
+              {% if tab == 'planificados' %}border-neutral text-neutral{% else %}border-transparent text-base-content/35 hover:text-base-content/60{% endif %}">
+      <i class="fa-regular fa-clock text-base {% if tab != 'planificados' %}text-neutral/40{% endif %}"></i>
+      <span class="text-[8.5px] font-semibold leading-tight">Planificados</span>
+      {% if pending_count %}<span class="badge badge-neutral badge-xs font-bold">{{ pending_count }}</span>{% else %}<span class="invisible text-[9px]">·</span>{% endif %}
     </a>
-    <a href="?tab=programados"
-       class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
-              {% if tab == 'programados' %}bg-base-100 shadow-sm text-base-content{% else %}text-base-content/50 hover:text-base-content{% endif %}">
-      Programados
-      {% if programados_count %}<span class="ml-1 badge badge-info badge-xs font-semibold">{{ programados_count }}</span>{% endif %}
+
+    <a href="?tab=programados&q={{ site_q }}"
+       class="flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors
+              {% if tab == 'programados' %}border-info text-info{% else %}border-transparent text-base-content/35 hover:text-base-content/60{% endif %}">
+      <i class="fa-regular fa-calendar-check text-base {% if tab != 'programados' %}text-info/40{% endif %}"></i>
+      <span class="text-[8.5px] font-semibold leading-tight">Programados</span>
+      {% if programados_count %}<span class="text-[9px] font-bold text-info tabular-nums">{{ programados_count }}</span>{% else %}<span class="invisible text-[9px]">·</span>{% endif %}
     </a>
-    <a href="?tab=en_ejecucion"
-       class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
-              {% if tab == 'en_ejecucion' %}bg-base-100 shadow-sm text-base-content{% else %}text-base-content/50 hover:text-base-content{% endif %}">
-      En ejecución
-      {% if en_ejecucion_count %}<span class="ml-1 badge badge-warning badge-xs font-semibold">{{ en_ejecucion_count }}</span>{% endif %}
+
+    <a href="?tab=en_ejecucion&q={{ site_q }}"
+       class="flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors
+              {% if tab == 'en_ejecucion' %}border-warning text-warning{% else %}border-transparent text-base-content/35 hover:text-base-content/60{% endif %}">
+      <i class="fa-solid fa-screwdriver-wrench text-base {% if tab != 'en_ejecucion' %}text-warning/40{% endif %}"></i>
+      <span class="text-[8.5px] font-semibold leading-tight">Ejecución</span>
+      {% if en_ejecucion_count %}<span class="text-[9px] font-bold text-warning tabular-nums">{{ en_ejecucion_count }}</span>{% else %}<span class="invisible text-[9px]">·</span>{% endif %}
     </a>
-    <a href="?tab=concluidos"
-       class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
-              {% if tab == 'concluidos' %}bg-base-100 shadow-sm text-base-content{% else %}text-base-content/50 hover:text-base-content{% endif %}">
-      Concluidos
-      {% if concluidos_count %}<span class="ml-1 badge badge-success badge-xs font-semibold">{{ concluidos_count }}</span>{% endif %}
+
+    <a href="?tab=concluidos&q={{ site_q }}"
+       class="flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors
+              {% if tab == 'concluidos' %}border-success text-success{% else %}border-transparent text-base-content/35 hover:text-base-content/60{% endif %}">
+      <i class="fa-regular fa-circle-check text-base {% if tab != 'concluidos' %}text-success/40{% endif %}"></i>
+      <span class="text-[8.5px] font-semibold leading-tight">Concluidos</span>
+      {% if concluidos_count %}<span class="text-[9px] font-bold text-success tabular-nums">{{ concluidos_count }}</span>{% else %}<span class="invisible text-[9px]">·</span>{% endif %}
     </a>
-    <a href="?tab=cancelados"
-       class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
-              {% if tab == 'cancelados' %}bg-base-100 shadow-sm text-base-content{% else %}text-base-content/50 hover:text-base-content{% endif %}">
-      Cancelados
-      {% if cancelados_count %}<span class="ml-1 badge badge-error badge-xs font-semibold">{{ cancelados_count }}</span>{% endif %}
+
+    <a href="?tab=cancelados&q={{ site_q }}"
+       class="flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors
+              {% if tab == 'cancelados' %}border-error text-error{% else %}border-transparent text-base-content/35 hover:text-base-content/60{% endif %}">
+      <i class="fa-regular fa-circle-xmark text-base {% if tab != 'cancelados' %}text-error/40{% endif %}"></i>
+      <span class="text-[8.5px] font-semibold leading-tight">Cancelados</span>
+      {% if cancelados_count %}<span class="text-[9px] font-bold text-error tabular-nums">{{ cancelados_count }}</span>{% else %}<span class="invisible text-[9px]">·</span>{% endif %}
     </a>
+
   </div>
-  <a href="{% url 'manager:visit_create' %}" class="btn btn-success btn-sm h-9 min-h-0">
-    <i class="fa-solid fa-plus text-xs"></i>
-    Nuevo Servicio
+</div>
+
+<!-- Mobile: búsqueda + botón -->
+<div class="flex items-center gap-2 sm:hidden mb-4">
+  <form method="get" class="flex items-center gap-2 flex-1">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <input type="search" name="q" value="{{ site_q }}"
+           placeholder="Buscar sitio…"
+           class="input input-bordered input-sm h-9 flex-1 text-sm">
+    {% if site_q %}
+      <a href="?tab={{ tab }}" class="btn btn-ghost btn-sm h-9 min-h-0 text-xs text-base-content/50">Limpiar</a>
+    {% endif %}
+  </form>
+  <a href="{% url 'manager:visit_create' %}" class="btn btn-success btn-sm h-9 min-h-0 shrink-0">
+    <i class="fa-solid fa-plus text-xs"></i> Nuevo
   </a>
+</div>
+
+<!-- Desktop header: tab bar + búsqueda + botón -->
+<div class="hidden sm:block mb-6">
+  <div class="lg:flex lg:items-start lg:gap-3 sticky top-14 z-10">
+  <div class="min-w-0 flex-1">
+    <div class="flex border-b border-base-300">
+      <a href="?tab=planificados&q={{ site_q }}"
+         class="flex flex-col items-center gap-0.5 px-5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors whitespace-nowrap
+                {% if tab == 'planificados' %}border-neutral text-neutral{% else %}border-transparent text-base-content/40 hover:text-base-content/60{% endif %}">
+        <i class="fa-regular fa-clock text-sm {% if tab != 'planificados' %}text-neutral/40{% endif %}"></i>
+        <span class="text-xs font-semibold">Planificados</span>
+        {% if pending_count %}<span class="badge badge-neutral badge-xs font-bold">{{ pending_count }}</span>{% else %}<span class="invisible text-[10px]">·</span>{% endif %}
+      </a>
+      <a href="?tab=programados&q={{ site_q }}"
+         class="flex flex-col items-center gap-0.5 px-5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors whitespace-nowrap
+                {% if tab == 'programados' %}border-info text-info{% else %}border-transparent text-base-content/40 hover:text-base-content/60{% endif %}">
+        <i class="fa-regular fa-calendar-check text-sm {% if tab != 'programados' %}text-info/40{% endif %}"></i>
+        <span class="text-xs font-semibold">Programados</span>
+        {% if programados_count %}<span class="text-[10px] font-bold text-info tabular-nums">{{ programados_count }}</span>{% else %}<span class="invisible text-[10px]">·</span>{% endif %}
+      </a>
+      <a href="?tab=en_ejecucion&q={{ site_q }}"
+         class="flex flex-col items-center gap-0.5 px-5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors whitespace-nowrap
+                {% if tab == 'en_ejecucion' %}border-warning text-warning{% else %}border-transparent text-base-content/40 hover:text-base-content/60{% endif %}">
+        <i class="fa-solid fa-screwdriver-wrench text-sm {% if tab != 'en_ejecucion' %}text-warning/40{% endif %}"></i>
+        <span class="text-xs font-semibold">Ejecución</span>
+        {% if en_ejecucion_count %}<span class="text-[10px] font-bold text-warning tabular-nums">{{ en_ejecucion_count }}</span>{% else %}<span class="invisible text-[10px]">·</span>{% endif %}
+      </a>
+      <a href="?tab=concluidos&q={{ site_q }}"
+         class="flex flex-col items-center gap-0.5 px-5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors whitespace-nowrap
+                {% if tab == 'concluidos' %}border-success text-success{% else %}border-transparent text-base-content/40 hover:text-base-content/60{% endif %}">
+        <i class="fa-regular fa-circle-check text-sm {% if tab != 'concluidos' %}text-success/40{% endif %}"></i>
+        <span class="text-xs font-semibold">Concluidos</span>
+        {% if concluidos_count %}<span class="text-[10px] font-bold text-success tabular-nums">{{ concluidos_count }}</span>{% else %}<span class="invisible text-[10px]">·</span>{% endif %}
+      </a>
+      <a href="?tab=cancelados&q={{ site_q }}"
+         class="flex flex-col items-center gap-0.5 px-5 pt-2.5 pb-2 border-b-2 -mb-px transition-colors whitespace-nowrap
+                {% if tab == 'cancelados' %}border-error text-error{% else %}border-transparent text-base-content/40 hover:text-base-content/60{% endif %}">
+        <i class="fa-regular fa-circle-xmark text-sm {% if tab != 'cancelados' %}text-error/40{% endif %}"></i>
+        <span class="text-xs font-semibold">Cancelados</span>
+        {% if cancelados_count %}<span class="text-[10px] font-bold text-error tabular-nums">{{ cancelados_count }}</span>{% else %}<span class="invisible text-[10px]">·</span>{% endif %}
+      </a>
+    </div>
+  </div>
+  <form method="get" id="visits-filter-form" class="flex items-center gap-2 shrink-0 mt-3 lg:mt-0">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <input type="search" name="q" value="{{ site_q }}"
+           placeholder="Buscar sitio…"
+           class="input input-bordered input-sm h-9 w-40 text-sm">
+    {% if site_q %}
+      <a href="?tab={{ tab }}" class="btn btn-ghost btn-sm h-9 min-h-0 text-xs text-base-content/50">Limpiar</a>
+    {% endif %}
+    <a href="{% url 'manager:visit_create' %}" class="btn btn-success btn-sm h-9 min-h-0">
+      + Servicio
+    </a>
+  </form>
+  </div>
 </div>
 
 {% if visits %}
 
-{% if tab == 'planificados' %}
-<!-- ── Planificados table ── -->
-<div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
+<!-- Mobile cards -->
+<div class="md:hidden space-y-3" id="visits-cards">
+  {% include cards_tpl %}
+</div>
+
+<!-- Desktop table -->
+<div class="hidden md:block bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
   <div class="overflow-x-auto">
     <table class="table table-sm">
-      <thead>
-        <tr>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-44">Coordinador</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-48">Técnico</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-56">Sitio</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Objetivo</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Fecha / ETA</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-center">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for visit in visits %}
-        <tr class="hover:bg-primary/5 transition-colors">
-
-          <!-- Coordinador -->
-          <td class="py-3.5">
-            {% if visit.coordinator %}
-            <p class="text-sm font-medium text-base-content">{{ visit.coordinator.get_full_name|default:visit.coordinator.email }}</p>
-            <p class="text-xs text-base-content/40 mt-0.5">{{ visit.coordinator.email }}</p>
-            {% else %}
-            <span class="text-xs text-base-content/30">—</span>
-            {% endif %}
-          </td>
-
-          <!-- Técnico -->
-          <td class="py-3.5">
-            <div class="flex items-center gap-2.5">
-              {% if visit.technician.profile_photo and visit.technician.profile_photo.image %}
-              <div class="w-8 h-8 rounded-full bg-cover bg-center shrink-0" style="background-image:url('{{ visit.technician.profile_photo.image.url }}');"></div>
-              {% else %}
-              <div class="w-8 h-8 rounded-full bg-info/10 flex items-center justify-center shrink-0">
-                <span class="text-info text-xs font-bold">{{ visit.technician.get_full_name|default:visit.technician.email|initials }}</span>
-              </div>
-              {% endif %}
-              <div class="min-w-0">
-                <p class="text-sm font-medium text-base-content truncate">{{ visit.technician.get_full_name|default:"—" }}</p>
-                <p class="text-xs text-base-content/40 truncate mt-0.5">{{ visit.technician.email }}</p>
-              </div>
-            </div>
-          </td>
-
-          <!-- Sitio -->
-          <td class="py-3.5">
-            <div class="flex items-center gap-3">
-              <span class="text-primary font-mono text-xs font-semibold">{{ visit.site.code }}</span>
-              {% if visit.site.operator_code %}
-              <span class="text-info font-mono text-xs">{{ visit.site.operator_code }}</span>
-              {% endif %}
-            </div>
-            <p class="text-xs text-base-content/90 mt-1">{{ visit.site.name }}</p>
-          </td>
-
-          <!-- Objetivo -->
-          <td class="text-sm text-base-content/70 max-w-xs truncate py-3.5">{{ visit.reason }}</td>
-
-          <!-- Fecha / ETA -->
-          <td class="py-3.5 whitespace-nowrap">
-            <p class="text-sm text-base-content/60">{{ visit.scheduled_date|date:"d-m-y" }}</p>
-            {% if visit.eta %}
-            <p class="text-xs text-base-content/40 mt-0.5 font-mono">{{ visit.eta|time:"H:i" }}</p>
-            {% endif %}
-          </td>
-
-          <!-- Acciones -->
-          <td class="py-3.5 text-center">
-            <div class="inline-flex items-center gap-1.5">
-              {% if request.user.role == 'super_manager' %}
-              <form method="post" action="{% url 'manager:visit_approve' pk=visit.pk %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-success btn-xs h-7 min-h-0 px-2.5 font-medium">
-                  Aprobar
-                </button>
-              </form>
-              <button onclick="document.getElementById('reject-visit-{{ visit.pk }}').showModal()"
-                      class="btn btn-ghost btn-xs h-7 min-h-0 px-2.5 text-error hover:bg-error/8">
-                Rechazar
-              </button>
-              {% else %}
-              <a href="{% url 'manager:visit_edit' pk=visit.pk %}"
-                 class="btn btn-edit btn-xs h-7 min-h-0 px-2.5 font-medium">
-                <i class="fa-solid fa-pen text-xs"></i>
-                Editar
-              </a>
-              <button onclick="document.getElementById('cancel-visit-{{ visit.pk }}').showModal()"
-                      class="btn btn-ghost btn-xs h-7 min-h-0 px-2.5 text-error hover:bg-error/8">
-                Cancelar
-              </button>
-              {% endif %}
-            </div>
-          </td>
-
-        </tr>
-        {% endfor %}
-      </tbody>
+      <thead>{% include thead_tpl %}</thead>
+      <tbody id="visits-rows">{% include rows_tpl %}</tbody>
     </table>
   </div>
 </div>
 
-{% else %}
-<!-- ── Programados / En ejecución / Concluidos / Cancelados table ── -->
-<div class="bg-base-100 rounded-2xl shadow-xs border border-base-300 overflow-hidden">
-  <div class="overflow-x-auto">
-    <table class="table table-sm">
-      <thead>
-        <tr>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-60">Técnico</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-72">Sitio</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-72">Objetivo</th>
-          {% if tab == 'cancelados' %}<th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-72">Motivo</th>{% endif %}
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Fecha</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Estado</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for visit in visits %}
-        <tr class="hover:bg-primary/5 transition-colors">
-          <td class="py-3.5">
-            <div class="flex items-center gap-3">
-              {% if visit.technician.profile_photo and visit.technician.profile_photo.image %}
-              <div class="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style="background-image:url('{{ visit.technician.profile_photo.image.url }}');"></div>
-              {% else %}
-              <div class="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center shrink-0">
-                <span class="text-info text-xs font-bold">{{ visit.technician.get_full_name|default:visit.technician.email|initials }}</span>
-              </div>
-              {% endif %}
-              <div class="min-w-0">
-                <p class="text-sm font-medium text-base-content truncate">{{ visit.technician.get_full_name|default:"—" }}</p>
-                <p class="text-xs text-base-content/50 truncate mt-0.5">{{ visit.technician.email }}</p>
-                {% if visit.technician.cargo %}
-                <p class="text-xs text-base-content/40 truncate">{{ visit.technician.cargo }}</p>
-                {% endif %}
-              </div>
-            </div>
-          </td>
-          <td class="py-3.5">
-            <div class="flex items-center gap-6">
-              <span class="text-primary font-mono text-xs font-semibold">{{ visit.site.code }}</span>
-              {% if visit.site.operator_code %}
-              <span class="text-info font-mono text-xs">{{ visit.site.operator_code }}</span>
-              {% endif %}
-            </div>
-            <p class="text-xs text-base-content/90 mt-1">{{ visit.site.name }}</p>
-          </td>
-          <td class="text-sm text-base-content/70 max-w-xs truncate py-3.5">{{ visit.reason }}</td>
-          {% if tab == 'cancelados' %}
-          <td class="pt-3.5 pb-6 max-w-xs">
-            {% with motivo=visit.notas|default:visit.rejection_reason %}
-            {% if motivo %}
-            <p class="text-sm text-base-content">{{ motivo }}</p>
-            {% else %}
-            <span class="text-xs text-base-content/30">—</span>
-            {% endif %}
-            {% endwith %}
-          </td>
-          {% endif %}
-          <td class="text-sm text-base-content/60 py-3.5 whitespace-nowrap">{{ visit.scheduled_date|date:"d-m-y" }}</td>
-          <td class="py-3.5 text-center">
-            {% if visit.status == 'completada' %}
-            <div class="indicator">
-              {% if visit.photos.count %}
-              <span class="indicator-item badge badge-xs font-mono font-bold bg-white text-gray-800" style="border-color:rgba(0,0,0,0.35)">{{ visit.photos.count }}</span>
-              {% endif %}
-              <span class="badge badge-outline badge-success badge-sm font-medium">{{ visit.get_status_display }}</span>
-            </div>
-            {% else %}
-            <div class="inline-flex items-center gap-1">
-              <span class="badge badge-outline badge-sm font-medium
-                {% if visit.status == 'programada' %}badge-info
-                {% elif visit.status == 'en_camino' or visit.status == 'llegada' or visit.status == 'trabajando' %}badge-warning
-                {% elif visit.status == 'cancelada' or visit.status == 'rechazada' %}badge-error
-                {% else %}badge-ghost{% endif %}">
-                {{ visit.get_status_display }}
-              </span>
-              {% if visit.status == 'en_camino' %}<span class="text-[10px] text-base-content/40 font-mono">2/5</span>
-              {% elif visit.status == 'llegada' %}<span class="text-[10px] text-base-content/40 font-mono">3/5</span>
-              {% elif visit.status == 'trabajando' %}<span class="text-[10px] text-base-content/40 font-mono">4/5</span>
-              {% endif %}
-            </div>
-            {% endif %}
-          </td>
-          <td class="py-3.5">
-            {% if tab == 'cancelados' %}
-              {% if request.user.role == 'super_manager' %}
-              <button onclick="document.getElementById('delete-visit-{{ visit.pk }}').showModal()"
-                      class="btn btn-delete btn-xs h-7 min-h-0 px-2.5 font-medium">
-                <i class="fa-solid fa-trash text-xs"></i>
-                Eliminar
-              </button>
-              {% endif %}
-            {% else %}
-            <a href="{% url 'manager:visit_detail' pk=visit.pk %}"
-               class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity" title="Ver detalle">
-              <i class="fa-solid fa-eye"></i>
-            </a>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+<!-- Botón Ver más -->
+<div class="flex justify-center mt-6">
+  <button id="load-more-btn" type="button"
+          data-next-offset="{{ next_offset }}"
+          class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0 {% if not has_more %}hidden{% endif %}">
+    Ver más
+  </button>
 </div>
-{% endif %}
-
-<!-- Pagination -->
-{% if page_obj.has_other_pages %}
-<div class="flex justify-center items-center mt-6 gap-2">
-  {% if page_obj.has_previous %}
-    <a href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}"
-       class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0">‹</a>
-  {% endif %}
-  <span class="text-sm text-base-content/50 px-3">
-    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
-  </span>
-  {% if page_obj.has_next %}
-    <a href="?tab={{ tab }}&page={{ page_obj.next_page_number }}"
-       class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0">›</a>
-  {% endif %}
-</div>
-{% endif %}
 
 {% else %}
 <!-- Empty state -->
@@ -303,7 +180,7 @@
 </div>
 {% endif %}
 
-<!-- Cancel modals (solo coordinador, tab planificados) -->
+<!-- Cancel modals (primer batch, solo coordinador en tab planificados) -->
 {% if tab == 'planificados' and request.user.role != 'super_manager' %}
 {% for visit in visits %}
 <dialog id="cancel-visit-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
@@ -320,10 +197,7 @@
         <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
           Motivo de cancelación *
         </label>
-        <textarea name="cancellation_reason"
-                  required
-                  minlength="3"
-                  rows="3"
+        <textarea name="cancellation_reason" required minlength="3" rows="3"
                   placeholder="Indica el motivo por el que se cancela este servicio…"
                   class="textarea textarea-bordered w-full text-sm resize-none"></textarea>
       </div>
@@ -339,7 +213,7 @@
 {% endfor %}
 {% endif %}
 
-<!-- Reject modals (solo para tab planificados) -->
+<!-- Reject modals (primer batch, tab planificados) -->
 {% if tab == 'planificados' %}
 {% for visit in visits %}
 <dialog id="reject-visit-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
@@ -356,10 +230,7 @@
         <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
           Motivo de rechazo *
         </label>
-        <textarea name="rejection_reason"
-                  required
-                  minlength="3"
-                  rows="3"
+        <textarea name="rejection_reason" required minlength="3" rows="3"
                   placeholder="Indica el motivo por el que se rechaza este servicio…"
                   class="textarea textarea-bordered w-full text-sm resize-none"></textarea>
       </div>
@@ -375,7 +246,7 @@
 {% endfor %}
 {% endif %}
 
-<!-- Delete modals (solo super_manager, tab cancelados) -->
+<!-- Delete modals (primer batch, super_manager, tab cancelados) -->
 {% if tab == 'cancelados' and request.user.role == 'super_manager' %}
 {% for visit in visits %}
 <dialog id="delete-visit-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
@@ -403,5 +274,168 @@
 </dialog>
 {% endfor %}
 {% endif %}
+
+<script>
+(function () {
+  var MOBILE_LIMIT  = {{ mobile_limit }};
+  var DESKTOP_LIMIT = {{ desktop_limit }};
+  var initialLimit  = {{ limit }};
+  var currentTab    = '{{ tab }}';
+  var currentQ      = '{{ site_q|escapejs }}';
+
+  var btn   = document.getElementById('load-more-btn');
+  var cards = document.getElementById('visits-cards');
+  var rows  = document.getElementById('visits-rows');
+
+  var isDesktop = window.matchMedia('(min-width: 768px)').matches;
+
+  // Setear cookie de viewport (max-age 1 año)
+  document.cookie = 'vp=' + (isDesktop ? 'd' : 'm') + '; path=/; max-age=31536000; SameSite=Lax';
+
+  function currentLimit() {
+    return window.matchMedia('(min-width: 768px)').matches ? DESKTOP_LIMIT : MOBILE_LIMIT;
+  }
+
+  function buildUrl(offset, limit) {
+    var p = new URLSearchParams();
+    p.set('tab', currentTab);
+    if (currentQ) p.set('q', currentQ);
+    p.set('offset', offset);
+    p.set('limit', limit);
+    return window.location.pathname + '?' + p.toString();
+  }
+
+  function fetchMore(offset, limit, replace) {
+    return fetch(buildUrl(offset, limit), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (replace) {
+        if (cards) cards.innerHTML = d.cards_html;
+        if (rows)  rows.innerHTML  = d.rows_html;
+      } else {
+        if (cards) cards.insertAdjacentHTML('beforeend', d.cards_html);
+        if (rows)  rows.insertAdjacentHTML('beforeend', d.rows_html);
+      }
+      if (btn) {
+        btn.dataset.nextOffset = d.next_offset;
+        btn.classList.toggle('hidden', !d.has_more);
+      }
+    });
+  }
+
+  // Si el server sirvió mobile-limit y el viewport real es desktop, completar silenciosamente
+  if (btn && isDesktop && initialLimit === MOBILE_LIMIT) {
+    var nextOffset = parseInt(btn.dataset.nextOffset, 10);
+    if (!isNaN(nextOffset)) {
+      fetchMore(nextOffset, DESKTOP_LIMIT - MOBILE_LIMIT, false);
+    }
+  }
+
+  // Handler botón Ver más
+  if (btn) {
+    btn.addEventListener('click', function () {
+      var offset = parseInt(btn.dataset.nextOffset, 10);
+      if (isNaN(offset)) return;
+      btn.disabled = true;
+      fetchMore(offset, currentLimit(), false).finally(function () {
+        btn.disabled = false;
+      });
+    });
+  }
+
+  // Búsqueda con debounce (formularios con input[name="q"])
+  var searchTimer;
+  document.querySelectorAll('input[name="q"]').forEach(function (input) {
+    input.addEventListener('input', function () {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        currentQ = input.value.trim();
+        var limit = currentLimit();
+        fetch(buildUrl(0, limit), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (cards) cards.innerHTML = d.cards_html;
+          if (rows)  rows.innerHTML  = d.rows_html;
+          if (btn) {
+            btn.dataset.nextOffset = d.next_offset;
+            btn.classList.toggle('hidden', !d.has_more);
+            btn.disabled = false;
+          }
+          // Actualizar URL sin recargar
+          var urlParams = new URLSearchParams();
+          urlParams.set('tab', currentTab);
+          if (currentQ) urlParams.set('q', currentQ);
+          history.replaceState(null, '', window.location.pathname + '?' + urlParams.toString());
+        });
+      }, 500);
+    });
+  });
+
+  // Prevenir submit del form de búsqueda y usar fetch
+  document.querySelectorAll('form').forEach(function (f) {
+    var qInput = f.querySelector('input[name="q"]');
+    if (qInput) {
+      f.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearTimeout(searchTimer);
+        currentQ = qInput.value.trim();
+        var limit = currentLimit();
+        fetch(buildUrl(0, limit), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (cards) cards.innerHTML = d.cards_html;
+          if (rows)  rows.innerHTML  = d.rows_html;
+          if (btn) {
+            btn.dataset.nextOffset = d.next_offset;
+            btn.classList.toggle('hidden', !d.has_more);
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+  });
+})();
+
+function confirmVisitAction(btn, action, techName, siteCode, modalId) {
+  var isApprove = action === 'aprobar';
+  var container = Alert._getContainer();
+  var el = document.createElement('div');
+  el.className = 'alert ' + (isApprove ? 'alert-success' : 'alert-warning');
+  el.style.cssText = 'opacity:0;transform:translateX(100%);transition:all .3s ease-in-out;flex-direction:column;align-items:flex-start;gap:8px;max-width:320px';
+  el.innerHTML =
+    '<div class="flex items-start gap-2">' +
+      '<i class="fa-solid fa-' + (isApprove ? 'circle-check' : 'circle-question') + ' shrink-0 mt-0.5"></i>' +
+      '<div>' +
+        '<p class="text-sm font-semibold">' + (isApprove ? 'Aprobar' : 'Rechazar') + ' servicio</p>' +
+        '<p class="text-xs opacity-70 mt-0.5">' + techName + ' — ' + siteCode + '</p>' +
+      '</div>' +
+    '</div>' +
+    '<div class="flex gap-2 self-end">' +
+      '<button class="btn btn-ghost btn-xs h-7 min-h-0 js-cancel">Cancelar</button>' +
+      '<button class="btn btn-xs h-7 min-h-0 js-confirm ' + (isApprove ? 'btn-success' : 'btn-error') + '">' + (isApprove ? 'Aprobar' : 'Rechazar') + '</button>' +
+    '</div>';
+  container.appendChild(el);
+  setTimeout(function () { el.style.opacity = '1'; el.style.transform = 'translateX(0)'; }, 10);
+  function dismiss() {
+    el.style.opacity = '0'; el.style.transform = 'translateX(100%)';
+    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+  }
+  el.querySelector('.js-cancel').onclick = dismiss;
+  el.querySelector('.js-confirm').onclick = function () {
+    dismiss();
+    if (modalId) {
+      document.getElementById(modalId).showModal();
+    } else {
+      btn.closest('form').submit();
+    }
+  };
+}
+</script>
 
 {% endblock %}

@@ -1,0 +1,87 @@
+{% load user_tags %}
+{% for visit in visits %}
+<tr class="hover:bg-primary/5 transition-colors">
+  <td class="py-3.5">
+    <div class="flex items-center gap-3">
+      {% if visit.technician.profile_photo and visit.technician.profile_photo.image %}
+      <div class="w-10 h-10 rounded-full bg-cover bg-center shrink-0" style="background-image:url('{{ visit.technician.profile_photo.image.url }}');"></div>
+      {% else %}
+      <div class="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center shrink-0">
+        <span class="text-info text-xs font-bold">{{ visit.technician.get_full_name|default:visit.technician.email|initials }}</span>
+      </div>
+      {% endif %}
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-base-content truncate">{{ visit.technician.get_full_name|default:"—" }}</p>
+        <p class="text-xs text-base-content/50 truncate mt-0.5">{{ visit.technician.email }}</p>
+        {% if visit.technician.cargo %}
+        <p class="text-xs text-base-content/40 truncate">{{ visit.technician.cargo }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </td>
+  <td class="py-3.5">
+    <div class="flex items-center gap-3 whitespace-nowrap">
+      <span class="text-accent font-mono text-xs font-semibold">{{ visit.site.code }}</span>
+      {% if visit.site.operator_code %}
+      <span class="font-mono text-xs text-info">{{ visit.site.operator_code }}</span>
+      {% endif %}
+    </div>
+    <p class="text-xs text-base-content/90 mt-1">{{ visit.site.name }}</p>
+  </td>
+  <td class="py-3.5 max-w-0 w-full overflow-hidden"><p class="text-sm text-base-content line-clamp-3">{{ visit.reason }}</p></td>
+  {% if tab == 'cancelados' %}
+  <td class="pt-3.5 pb-6 max-w-xs">
+    {% with motivo=visit.notas|default:visit.rejection_reason %}
+    {% if motivo %}
+    <p class="text-sm text-base-content">{{ motivo }}</p>
+    {% else %}
+    <span class="text-xs text-base-content/30">—</span>
+    {% endif %}
+    {% endwith %}
+  </td>
+  {% endif %}
+  <td class="text-sm text-base-content/60 py-3.5 whitespace-nowrap">{{ visit.scheduled_date|date:"d-m-Y" }}</td>
+  <td class="py-3.5 text-center">
+    {% if visit.status == 'completada' %}
+    <div class="indicator">
+      {% if visit.photos.count %}
+      <span class="indicator-item badge badge-xs font-mono font-bold bg-white text-gray-800" style="border-color:rgba(0,0,0,0.35)">{{ visit.photos.count }}</span>
+      {% endif %}
+      <span class="badge badge-outline badge-success badge-sm font-medium">{{ visit.get_status_display }}</span>
+    </div>
+    {% else %}
+    <div class="inline-flex items-center gap-1">
+      <span class="badge badge-outline badge-sm font-medium
+        {% if visit.status == 'programada' %}badge-info
+        {% elif visit.status == 'en_camino' or visit.status == 'llegada' or visit.status == 'trabajando' %}badge-warning
+        {% elif visit.status == 'cancelada' or visit.status == 'rechazada' %}badge-error
+        {% else %}badge-ghost{% endif %}">
+        {{ visit.get_status_display }}
+      </span>
+      {% if visit.status == 'en_camino' %}<span class="text-[10px] text-base-content/40 font-mono">2/5</span>
+      {% elif visit.status == 'llegada' %}<span class="text-[10px] text-base-content/40 font-mono">3/5</span>
+      {% elif visit.status == 'trabajando' %}<span class="text-[10px] text-base-content/40 font-mono">4/5</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </td>
+  <td class="py-3.5 text-center whitespace-nowrap">
+    {% if tab == 'cancelados' %}
+      {% if request.user.role == 'super_manager' %}
+      <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              data-url="{% url 'manager:visit_delete' pk=visit.pk %}"
+              data-name="{{ visit.technician.get_full_name|default:visit.technician.email }} — {{ visit.site.code }}"
+              onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('tr'),'servicio','Esta acción es irreversible y eliminará el registro permanentemente.')">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
+      {% endif %}
+    {% else %}
+    <a href="{% url 'manager:visit_detail' pk=visit.pk %}"
+       class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity" title="Ver detalle">
+      <i class="fa-solid fa-eye"></i>
+    </a>
+    {% endif %}
+  </td>
+</tr>
+{% endfor %}

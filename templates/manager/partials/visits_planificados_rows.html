@@ -1,0 +1,69 @@
+{% load user_tags %}
+{% for visit in visits %}
+<tr class="hover:bg-primary/5 transition-colors">
+  <td class="py-3.5">
+    {% if visit.coordinator %}
+    <p class="text-sm font-medium text-base-content">{{ visit.coordinator.get_full_name|default:visit.coordinator.email }}</p>
+    <p class="text-xs text-base-content/40 mt-0.5">{{ visit.coordinator.email }}</p>
+    {% else %}
+    <span class="text-xs text-base-content/30">—</span>
+    {% endif %}
+  </td>
+  <td class="py-3.5">
+    <div class="flex items-center gap-2.5">
+      {% if visit.technician.profile_photo and visit.technician.profile_photo.image %}
+      <div class="w-8 h-8 rounded-full bg-cover bg-center shrink-0" style="background-image:url('{{ visit.technician.profile_photo.image.url }}');"></div>
+      {% else %}
+      <div class="w-8 h-8 rounded-full bg-info/10 flex items-center justify-center shrink-0">
+        <span class="text-info text-xs font-bold">{{ visit.technician.get_full_name|default:visit.technician.email|initials }}</span>
+      </div>
+      {% endif %}
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-base-content truncate">{{ visit.technician.get_full_name|default:"—" }}</p>
+        <p class="text-xs text-base-content/40 truncate mt-0.5">{{ visit.technician.email }}</p>
+      </div>
+    </div>
+  </td>
+  <td class="py-3.5">
+    <div class="flex items-center gap-3 whitespace-nowrap">
+      <span class="text-accent font-mono text-xs font-semibold">{{ visit.site.code }}</span>
+      {% if visit.site.operator_code %}
+      <span class="font-mono text-xs text-info">{{ visit.site.operator_code }}</span>
+      {% endif %}
+    </div>
+    <p class="text-xs text-base-content/90 mt-1">{{ visit.site.name }}</p>
+  </td>
+  <td class="py-3.5 max-w-0 w-full overflow-hidden"><p class="text-sm text-base-content line-clamp-3">{{ visit.reason }}</p></td>
+  <td class="py-3.5 whitespace-nowrap">
+    <p class="text-sm text-base-content/60">{{ visit.scheduled_date|date:"d-m-Y" }}</p>
+    {% if visit.eta %}
+    <p class="text-xs text-base-content/40 mt-0.5 font-mono">{{ visit.eta|time:"H:i" }}</p>
+    {% endif %}
+  </td>
+  <td class="py-3.5 text-center">
+    <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-center gap-1">
+      {% if request.user.role == 'super_manager' %}
+      <form method="post" action="{% url 'manager:visit_approve' pk=visit.pk %}">
+        {% csrf_token %}
+        <button type="button" onclick="confirmVisitAction(this,'aprobar','{{ visit.technician.get_full_name|default:visit.technician.email }}','{{ visit.site.code }}')"
+                class="btn btn-success btn-xs h-7 min-h-0 px-2.5 font-medium">Aprobar</button>
+      </form>
+      <button type="button" onclick="confirmVisitAction(this,'rechazar','{{ visit.technician.get_full_name|default:visit.technician.email }}','{{ visit.site.code }}','reject-visit-{{ visit.pk }}')"
+              class="btn btn-ghost btn-xs h-7 min-h-0 px-2.5 text-error hover:bg-error/8">
+        Rechazar
+      </button>
+      {% else %}
+      <a href="{% url 'manager:visit_edit' pk=visit.pk %}"
+         class="btn btn-edit btn-xs h-7 min-h-0 px-2.5 font-medium">
+        <i class="fa-solid fa-pen text-xs"></i>
+        Editar
+      </a>
+      <button onclick="document.getElementById('cancel-visit-{{ visit.pk }}').showModal()"
+              class="btn btn-ghost btn-xs h-7 min-h-0 px-2.5 text-error hover:bg-error/8">
+        Cancelar
+      </button>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% endfor %}
