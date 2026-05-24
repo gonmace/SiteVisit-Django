@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from django.db.models import Count
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -19,6 +19,23 @@ def _visits_for_user(user):
     return qs
 
 
+def _avg_work_duration_minutes(qs):
+    """Returns average work duration in minutes for completed visits, or None."""
+    result = qs.filter(
+        status=Visit.Status.COMPLETADA,
+        hora_inicio_trabajos__isnull=False,
+        hora_fin_trabajos__isnull=False,
+    ).annotate(
+        duration=ExpressionWrapper(
+            F('hora_fin_trabajos') - F('hora_inicio_trabajos'),
+            output_field=DurationField(),
+        )
+    ).aggregate(avg=Avg('duration'))['avg']
+    if result is None:
+        return None
+    return round(result.total_seconds() / 60, 1)
+
+
 class StatsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -28,25 +45,9 @@ class StatsView(APIView):
         if user.role not in allowed:
             return Response({'detail': 'forbidden'}, status=403)
 
-        qs = Visit.objects.all()
-        if user.role == User.Role.MANAGER:
-            qs = qs.filter(technician__company=user.company)
-
+        qs = _visits_for_user(user)
         by_status = {s: qs.filter(status=s).count() for s in Visit.Status.values}
-
-        # Average work duration (minutes) for completed visits
-        avg_duration = None
-        completed = qs.filter(
-            status=Visit.Status.COMPLETADA,
-            hora_inicio_trabajos__isnull=False,
-            hora_fin_trabajos__isnull=False,
-        )
-        if completed.exists():
-            total_secs = sum(
-                (v.hora_fin_trabajos - v.hora_inicio_trabajos).total_seconds()
-                for v in completed
-            )
-            avg_duration = round(total_secs / completed.count() / 60, 1)
+        avg_duration = _avg_work_duration_minutes(qs)
 
         # Top technicians by visit count
         top_techs = list(
@@ -127,6 +128,11 @@ class MapDataView(APIView):
                 qs = qs.filter(technician_id=int(technician_id))
             except (ValueError, TypeError):
                 pass
+
+        # Sitio (código parcial)
+        site_code = request.query_params.get('site_code', '').strip()
+        if site_code:
+            qs = qs.filter(site__code__icontains=site_code)
 
         # Datos de visitas con info de sitio y técnico
         visits_qs = list(

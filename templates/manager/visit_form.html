@@ -116,7 +116,7 @@
   <!-- Actions -->
   <div class="flex items-center justify-end gap-3 mt-5">
     <a href="{% url 'manager:visits_approval' %}" class="btn btn-ghost btn-sm h-9 min-h-0">Cancelar</a>
-    <button type="submit" class="btn btn-primary btn-sm h-9 min-h-0">
+    <button type="submit" class="btn btn-success btn-sm h-9 min-h-0">
       <i class="fa-solid fa-paper-plane text-xs"></i>
       {% if is_edit %}Guardar cambios{% elif request.user.role == 'super_manager' %}Crear y aprobar{% else %}Enviar para aprobación{% endif %}
     </button>

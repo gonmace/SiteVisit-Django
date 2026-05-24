@@ -1,25 +1,19 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponseRedirect
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views import View
 from django.views.generic import ListView
-from django.views.generic.edit import CreateView, DeleteView, UpdateView
+from django.views.generic.edit import CreateView, DeleteView
+
+from django.db.models import Case, IntegerField, Q, Value, When
+
+from core.mixins import ManagerRequiredMixin
 from users.forms import CoordinatorForm, TechnicianForm
 from users.models import User, UserDevice
-
-
-class ManagerRequiredMixin(LoginRequiredMixin):
-    login_url = '/manager/login/'
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return self.handle_no_permission()
-        if request.user.role not in (User.Role.MANAGER, User.Role.SUPER_MANAGER):
-            return redirect(self.login_url)
-        return super().dispatch(request, *args, **kwargs)
 
 
 class SuperManagerRequiredMixin(LoginRequiredMixin):
@@ -39,7 +33,6 @@ class UsersListView(ManagerRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        from django.db.models import Case, IntegerField, Value, When
         qs = User.objects.filter(role=User.Role.TECHNICIAN).select_related('device', 'profile_photo', 'status_changed_by').annotate(
             status_order=Case(
                 When(status=User.Status.PENDING,  then=Value(0)),
@@ -53,7 +46,6 @@ class UsersListView(ManagerRequiredMixin, ListView):
             qs = qs.filter(company=self.request.user.company)
         q = self.request.GET.get('q', '').strip()
         if q:
-            from django.db.models import Q
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q))
         return qs
 
@@ -62,6 +54,11 @@ class UsersListView(ManagerRequiredMixin, ListView):
         ctx['q'] = self.request.GET.get('q', '')
         ctx['is_manager'] = True
         return ctx
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return render(self.request, 'manager/partials/users_results.html', context)
+        return super().render_to_response(context, **response_kwargs)
 
 
 class TechnicianCreateView(ManagerRequiredMixin, CreateView):
@@ -92,57 +89,56 @@ class TechnicianCreateView(ManagerRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class TechnicianUpdateView(ManagerRequiredMixin, UpdateView):
-    model = User
-    form_class = TechnicianForm
-    template_name = 'manager/technician_form.html'
-    success_url = reverse_lazy('manager:users_list')
-
-    def get_queryset(self):
+class TechnicianUpdateView(ManagerRequiredMixin, View):
+    def _get_tech(self, request, pk):
         qs = User.objects.filter(role=User.Role.TECHNICIAN).select_related('device')
-        if self.request.user.role == User.Role.MANAGER:
-            qs = qs.filter(company=self.request.user.company)
-        return qs
+        if request.user.role == User.Role.MANAGER:
+            qs = qs.filter(company=request.user.company)
+        return get_object_or_404(qs, pk=pk)
 
-    def _manager_status_locked(self):
-        """Coordinador no puede cambiar estado si el técnico aún no registró dispositivo."""
-        return (
-            self.request.user.role == User.Role.MANAGER
-            and not hasattr(self.object, 'device')
-        )
-
-    def get_form(self, form_class=None):
+    def _build_form(self, request, tech, data=None):
         from django import forms as dforms
-        form = super().get_form(form_class)
-        if self.request.user.role == User.Role.MANAGER:
+        form = TechnicianForm(data, instance=tech)
+        if request.user.role == User.Role.MANAGER:
             form.fields['company'].widget = dforms.HiddenInput()
-            if self._manager_status_locked():
+            if 'status' in form.fields and not hasattr(tech, 'device'):
                 del form.fields['status']
         return form
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['title'] = f'Editar Técnico — {self.object.get_full_name() or self.object.email}'
-        ctx['cancel_url'] = reverse_lazy('manager:users_list')
-        if self.request.user.role == User.Role.MANAGER:
-            ctx['locked_company'] = self.request.user.company
-        if self._manager_status_locked():
-            ctx['status_locked'] = True
-        return ctx
+    def _ctx(self, request, tech, form):
+        return {
+            'form': form, 'tech': tech,
+            'locked_company': request.user.company if request.user.role == User.Role.MANAGER else None,
+            'status_locked': request.user.role == User.Role.MANAGER and not hasattr(tech, 'device'),
+        }
 
-    def form_valid(self, form):
-        if self.request.user.role == User.Role.MANAGER:
-            form.instance.company = self.request.user.company
-        if 'status' in form.changed_data:
-            form.instance.status_changed_by = self.request.user
-            form.instance.status_changed_at = timezone.now()
-            try:
-                device = form.instance.device
-                device.is_active = (form.instance.status == User.Status.ACTIVE)
-                device.save(update_fields=['is_active'])
-            except Exception:
-                pass
-        return super().form_valid(form)
+    def get(self, request, pk, **kwargs):
+        tech = self._get_tech(request, pk)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            form = self._build_form(request, tech)
+            return render(request, 'manager/technician_form_modal.html', self._ctx(request, tech, form))
+        return redirect('manager:users_list')
+
+    def post(self, request, pk, **kwargs):
+        tech = self._get_tech(request, pk)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            form = self._build_form(request, tech, request.POST)
+            if form.is_valid():
+                if request.user.role == User.Role.MANAGER:
+                    form.instance.company = request.user.company
+                if 'status' in form.changed_data:
+                    form.instance.status_changed_by = request.user
+                    form.instance.status_changed_at = timezone.now()
+                    try:
+                        tech.device.is_active = (form.instance.status == User.Status.ACTIVE)
+                        tech.device.save(update_fields=['is_active'])
+                    except Exception:
+                        pass
+                form.save()
+                messages.success(request, f'Técnico {tech.get_full_name() or tech.email} actualizado.')
+                return JsonResponse({'ok': True})
+            return render(request, 'manager/technician_form_modal.html', self._ctx(request, tech, form), status=422)
+        return redirect('manager:users_list')
 
 
 class TechnicianDeleteView(ManagerRequiredMixin, DeleteView):
@@ -155,6 +151,14 @@ class TechnicianDeleteView(ManagerRequiredMixin, DeleteView):
         if self.request.user.role == User.Role.MANAGER:
             qs = qs.filter(company=self.request.user.company)
         return qs
+
+    def form_valid(self, form):
+        name = self.object.get_full_name() or self.object.email
+        self.object.delete()
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True, 'message': f'Técnico {name} eliminado.'})
+        messages.success(self.request, f'Técnico {name} eliminado.')
+        return redirect(self.success_url)
 
 
 class TechnicianImportView(SuperManagerRequiredMixin, View):
@@ -211,7 +215,7 @@ class TechnicianImportView(SuperManagerRequiredMixin, View):
                         },
                     )
                     if flag:
-                        user.username = email[:150]
+                        user.username = User.username_from_email(email)
                         user.set_unusable_password()
                         user.save(update_fields=['username', 'password'])
                         created += 1
@@ -318,6 +322,13 @@ class TechnicianToggleStatusView(ManagerRequiredMixin, View):
         if hasattr(tech, 'device'):
             tech.device.is_active = (tech.status == User.Status.ACTIVE)
             tech.device.save(update_fields=['is_active'])
+        nombre = tech.get_full_name() or tech.email
+        if tech.status == User.Status.ACTIVE:
+            messages.success(request, f'{nombre} marcado como Activo.')
+        elif tech.status == User.Status.PENDING:
+            messages.warning(request, f'{nombre} marcado como Pendiente.')
+        else:
+            messages.warning(request, f'{nombre} marcado como Inactivo.')
         return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/manager/users/'))
 
 
@@ -329,7 +340,6 @@ class CoordinatorsListView(SuperManagerRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        from django.db.models import Case, IntegerField, Value, When
         qs = User.objects.filter(role=User.Role.MANAGER).annotate(
             status_order=Case(
                 When(status=User.Status.ACTIVE,   then=Value(0)),
@@ -340,7 +350,6 @@ class CoordinatorsListView(SuperManagerRequiredMixin, ListView):
         ).order_by('status_order', 'first_name')
         q = self.request.GET.get('q', '').strip()
         if q:
-            from django.db.models import Q
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q))
         return qs
 
@@ -348,6 +357,11 @@ class CoordinatorsListView(SuperManagerRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx['q'] = self.request.GET.get('q', '')
         return ctx
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return render(self.request, 'manager/partials/coordinators_results.html', context)
+        return super().render_to_response(context, **response_kwargs)
 
 
 class CoordinatorCreateView(SuperManagerRequiredMixin, CreateView):
@@ -367,24 +381,27 @@ class CoordinatorCreateView(SuperManagerRequiredMixin, CreateView):
         return super().form_valid(form)
 
 
-class CoordinatorUpdateView(SuperManagerRequiredMixin, UpdateView):
-    model = User
-    form_class = CoordinatorForm
-    template_name = 'manager/coordinator_form.html'
-    success_url = reverse_lazy('manager:coordinators_list')
+class CoordinatorUpdateView(SuperManagerRequiredMixin, View):
+    def _get_coord(self, pk):
+        return get_object_or_404(User, pk=pk, role=User.Role.MANAGER)
 
-    def get_queryset(self):
-        return User.objects.filter(role=User.Role.MANAGER)
+    def get(self, request, pk, **kwargs):
+        coord = self._get_coord(pk)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            form = CoordinatorForm(instance=coord)
+            return render(request, 'manager/coordinator_form_modal.html', {'form': form, 'coord': coord})
+        return redirect('manager:coordinators_list')
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['title'] = f'Editar Coordinador — {self.object.get_full_name() or self.object.email}'
-        ctx['cancel_url'] = reverse_lazy('manager:coordinators_list')
-        return ctx
-
-    def form_valid(self, form):
-        messages.success(self.request, f'Coordinador {form.instance.get_full_name() or form.instance.email} actualizado.')
-        return super().form_valid(form)
+    def post(self, request, pk, **kwargs):
+        coord = self._get_coord(pk)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            form = CoordinatorForm(request.POST, instance=coord)
+            if form.is_valid():
+                form.save()
+                messages.success(request, f'Coordinador {coord.get_full_name() or coord.email} actualizado.')
+                return JsonResponse({'ok': True})
+            return render(request, 'manager/coordinator_form_modal.html', {'form': form, 'coord': coord}, status=422)
+        return redirect('manager:coordinators_list')
 
 
 class CoordinatorDeleteView(SuperManagerRequiredMixin, DeleteView):
@@ -396,8 +413,12 @@ class CoordinatorDeleteView(SuperManagerRequiredMixin, DeleteView):
         return User.objects.filter(role=User.Role.MANAGER)
 
     def form_valid(self, form):
-        messages.success(self.request, 'Coordinador eliminado.')
-        return super().form_valid(form)
+        name = self.object.get_full_name() or self.object.email
+        self.object.delete()
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True, 'message': f'Coordinador {name} eliminado.'})
+        messages.success(self.request, f'Coordinador {name} eliminado.')
+        return redirect(self.success_url)
 
 
 class CoordinatorToggleStatusView(SuperManagerRequiredMixin, View):
@@ -411,4 +432,9 @@ class CoordinatorToggleStatusView(SuperManagerRequiredMixin, View):
             coord.status    = User.Status.INACTIVE
             coord.is_active = False
         coord.save(update_fields=['status', 'is_active'])
+        nombre = coord.get_full_name() or coord.email
+        if coord.status == User.Status.ACTIVE:
+            messages.success(request, f'{nombre} marcado como Activo.')
+        else:
+            messages.warning(request, f'{nombre} marcado como Inactivo.')
         return HttpResponseRedirect(request.META.get('HTTP_REFERER', '/manager/coordinators/'))

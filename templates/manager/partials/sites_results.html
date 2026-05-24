@@ -1,0 +1,170 @@
+{% load humanize %}
+{% if sites %}
+
+<!-- Tabla — visible solo en md+ -->
+<div class="hidden md:block bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="table table-sm table-fixed w-full">
+      <thead>
+        <tr>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[12%]">Cód. Sitio</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[12%]">Cod. Op.</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[36%]">Nombre Sitio</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[14%]">Empresa</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-right w-[10%]">Alt. (m)</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-center w-[16%]">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for site in sites %}
+        <tr class="hover:bg-primary/5 transition-colors">
+          <td class="py-3.5">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-accent/10 text-accent font-mono text-xs font-medium truncate max-w-full">
+              {{ site.code }}
+            </span>
+          </td>
+          <td class="py-3.5">
+            <span class="font-mono text-sm text-base-content/60 block truncate">{{ site.operator_code|default:"—" }}</span>
+          </td>
+          <td class="py-3.5">
+            <span class="text-sm font-medium text-base-content block truncate">{{ site.name }}</span>
+          </td>
+          <td class="py-3.5">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-base-200 text-base-content/70 text-xs font-semibold uppercase tracking-wide truncate max-w-full">
+              {{ site.get_company_display }}
+            </span>
+          </td>
+          <td class="py-3.5 text-right">
+            <span class="font-mono text-sm text-base-content/60">
+              {% if site.height is not None %}{{ site.height|intcomma }}{% else %}<span class="text-base-content/30">—</span>{% endif %}
+            </span>
+          </td>
+          <td class="py-3.5 text-center">
+            <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity" title="Ver"
+              data-url="{% url 'manager:site_detail' site.pk %}"
+              onclick="openSiteDetail(this.dataset.url)">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+            {% if is_super_manager %}
+            <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar"
+              data-url="{% url 'manager:site_edit' site.pk %}"
+              onclick="openSiteEdit(this.dataset.url)">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              data-url="{% url 'manager:site_delete' site.pk %}"
+              data-name="{{ site.code }} — {{ site.name }}"
+              onclick="deleteSite(this.dataset.url, this.dataset.name, this.closest('tr'))">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Cards — visible solo en mobile -->
+<div class="md:hidden flex flex-col gap-3">
+  {% for site in sites %}
+  <div class="card bg-base-100 border border-base-300 shadow-xs">
+    <div class="card-body p-4">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-accent/10 text-accent font-mono text-xs font-medium">
+            {{ site.code }}
+          </span>
+          {% if site.operator_code %}
+          <span class="font-mono text-xs text-base-content/50">{{ site.operator_code }}</span>
+          {% endif %}
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button type="button"
+            class="inline-flex items-center justify-center w-8 h-8 text-view hover:opacity-70 transition-opacity" title="Ver"
+            data-url="{% url 'manager:site_detail' site.pk %}"
+            onclick="openSiteDetail(this.dataset.url)">
+            <i class="fa-solid fa-eye text-sm"></i>
+          </button>
+          {% if is_super_manager %}
+          <button type="button"
+            class="inline-flex items-center justify-center w-8 h-8 text-edit hover:opacity-70 transition-opacity" title="Editar"
+            data-url="{% url 'manager:site_edit' site.pk %}"
+            onclick="openSiteEdit(this.dataset.url)">
+            <i class="fa-solid fa-pen text-sm"></i>
+          </button>
+          <button type="button"
+            class="inline-flex items-center justify-center w-8 h-8 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+            data-url="{% url 'manager:site_delete' site.pk %}"
+            data-name="{{ site.code }} — {{ site.name }}"
+            onclick="deleteSite(this.dataset.url, this.dataset.name, this.closest('.card'))">
+            <i class="fa-solid fa-trash-can text-sm"></i>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      <p class="text-sm font-medium text-base-content mt-1">{{ site.name }}</p>
+      <div class="flex items-center justify-between gap-2 mt-2">
+        <div class="flex flex-wrap gap-x-4 gap-y-1">
+          <span class="text-xs text-base-content/40">
+            <span class="font-medium text-base-content/60">Lat</span>
+            <span class="font-mono ml-1">{{ site.latitude|stringformat:".6f" }}</span>
+          </span>
+          <span class="text-xs text-base-content/40">
+            <span class="font-medium text-base-content/60">Lon</span>
+            <span class="font-mono ml-1">{{ site.longitude|stringformat:".6f" }}</span>
+          </span>
+          {% if site.height is not None %}
+          <span class="text-xs text-base-content/40">
+            <span class="font-medium text-base-content/60">Alt</span>
+            <span class="font-mono ml-1">{{ site.height|intcomma }} m</span>
+          </span>
+          {% endif %}
+        </div>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-base-200 text-base-content/70 text-xs font-semibold uppercase tracking-wide shrink-0">
+          {{ site.get_company_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="flex justify-center items-center mt-6 gap-2">
+  {% if page_obj.has_previous %}
+    <a href="?q={{ q }}&page={{ page_obj.previous_page_number }}"
+       class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0">‹</a>
+  {% endif %}
+  <span class="text-sm text-base-content/50 px-3">
+    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+  </span>
+  {% if page_obj.has_next %}
+    <a href="?q={{ q }}&page={{ page_obj.next_page_number }}"
+       class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0">›</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs">
+  <div class="flex flex-col items-center justify-center py-20 px-8 text-center">
+    <div class="w-12 h-12 rounded-2xl bg-base-200 flex items-center justify-center mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </div>
+    <p class="text-sm font-medium text-base-content/40">
+      {% if q %}No se encontraron sitios para "{{ q }}"{% else %}Sin sitios registrados{% endif %}
+    </p>
+    {% if is_super_manager and not q %}
+      <a href="{% url 'manager:site_create' %}" class="btn btn-success btn-sm mt-4 text-xs font-semibold">+ Agregar sitio</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

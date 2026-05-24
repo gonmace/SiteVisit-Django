@@ -36,6 +36,10 @@ class User(AbstractUser):
     USERNAME_FIELD  = 'email'
     REQUIRED_FIELDS = ['username']
 
+    @staticmethod
+    def username_from_email(email: str) -> str:
+        return email[:150]
+
     class Meta:
         verbose_name = 'usuario'
         verbose_name_plural = 'usuarios'

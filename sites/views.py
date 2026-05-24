@@ -12,7 +12,7 @@ class SiteViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends    = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields   = ['company', 'is_active']
-    search_fields      = ['code', 'name', 'address']
+    search_fields      = ['code', 'name', 'operator_code']
 
     def get_queryset(self):
         user = self.request.user

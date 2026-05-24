@@ -17,24 +17,12 @@ class TrackingPointSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'uploaded_at']
 
 
-class VisitListSerializer(serializers.ModelSerializer):
+class VisitBaseSerializer(serializers.ModelSerializer):
     technician_name    = serializers.SerializerMethodField()
     coordinator_name   = serializers.SerializerMethodField()
     site_code          = serializers.SerializerMethodField()
     site_operator_code = serializers.SerializerMethodField()
     site_name          = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Visit
-        fields = [
-            'id', 'technician', 'technician_name',
-            'coordinator', 'coordinator_name',
-            'site', 'site_code', 'site_operator_code', 'site_name',
-            'status', 'reason', 'scheduled_date', 'eta',
-            'hora_inicio_trabajos', 'hora_fin_trabajos',
-            'approved_at', 'rejected_at',
-            'notas', 'created_at',
-        ]
 
     def get_technician_name(self, obj):
         return obj.technician.get_full_name() or obj.technician.email
@@ -54,14 +42,23 @@ class VisitListSerializer(serializers.ModelSerializer):
         return obj.site.name
 
 
-class VisitDetailSerializer(serializers.ModelSerializer):
-    photos             = VisitPhotoSerializer(many=True, read_only=True)
-    tracking_points    = TrackingPointSerializer(many=True, read_only=True)
-    technician_name    = serializers.SerializerMethodField()
-    coordinator_name   = serializers.SerializerMethodField()
-    site_code          = serializers.SerializerMethodField()
-    site_operator_code = serializers.SerializerMethodField()
-    site_name          = serializers.SerializerMethodField()
+class VisitListSerializer(VisitBaseSerializer):
+    class Meta:
+        model = Visit
+        fields = [
+            'id', 'technician', 'technician_name',
+            'coordinator', 'coordinator_name',
+            'site', 'site_code', 'site_operator_code', 'site_name',
+            'status', 'reason', 'scheduled_date', 'eta',
+            'hora_inicio_trabajos', 'hora_fin_trabajos',
+            'approved_at', 'rejected_at',
+            'notas', 'created_at',
+        ]
+
+
+class VisitDetailSerializer(VisitBaseSerializer):
+    photos          = VisitPhotoSerializer(many=True, read_only=True)
+    tracking_points = TrackingPointSerializer(many=True, read_only=True)
 
     class Meta:
         model = Visit
@@ -76,43 +73,6 @@ class VisitDetailSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'status', 'coordinator', 'approved_by', 'approved_at',
                             'rejected_by', 'rejected_at', 'created_at']
-
-    def get_technician_name(self, obj):
-        return obj.technician.get_full_name() or obj.technician.email
-
-    def get_coordinator_name(self, obj):
-        if obj.coordinator:
-            return obj.coordinator.get_full_name() or obj.coordinator.email
-        return ''
-
-    def get_site_code(self, obj):
-        return obj.site.code
-
-    def get_site_operator_code(self, obj):
-        return obj.site.operator_code or ''
-
-    def get_site_name(self, obj):
-        return obj.site.name
-
-
-# La creación de visitas se realiza exclusivamente vía portal web (VisitCreateWebView).
-# Este serializer queda inactivo — el endpoint POST /api/v1/visits/ responde 405.
-class VisitCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Visit
-        fields = ['site', 'reason', 'scheduled_date', 'eta']
-
-    def validate_site(self, site):
-        user = self.context['request'].user
-        if site.company != user.company:
-            raise serializers.ValidationError('El sitio no pertenece a tu empresa.')
-        if not site.is_active:
-            raise serializers.ValidationError('El sitio no está activo.')
-        return site
-
-    def create(self, validated_data):
-        validated_data['technician'] = self.context['request'].user
-        return super().create(validated_data)
 
 
 class VisitStatusSerializer(serializers.Serializer):

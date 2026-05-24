@@ -17,7 +17,6 @@ from visits.models import (
 )
 from visits.serializers import (
     TrackingPointSerializer,
-    VisitCreateSerializer,
     VisitDetailSerializer,
     VisitListSerializer,
     VisitPhotoSerializer,
@@ -31,8 +30,6 @@ class VisitViewSet(viewsets.ModelViewSet):
     filterset_fields   = ['status', 'site', 'scheduled_date']
 
     def get_serializer_class(self):
-        if self.action == 'create':
-            return VisitCreateSerializer
         if self.action == 'retrieve':
             return VisitDetailSerializer
         return VisitListSerializer
@@ -50,9 +47,6 @@ class VisitViewSet(viewsets.ModelViewSet):
         if user.role == User.Role.MANAGER:
             return qs.filter(technician__company=user.company)
         return qs  # super_manager, viewer
-
-    def get_permissions(self):
-        return [IsAuthenticated()]
 
     def update(self, request, *args, **kwargs):
         raise MethodNotAllowed('PUT')

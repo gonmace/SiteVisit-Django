@@ -30,10 +30,10 @@
   </td>
   <td class="py-3.5 max-w-0 w-full overflow-hidden"><p class="text-sm text-base-content line-clamp-3">{{ visit.reason }}</p></td>
   {% if tab == 'cancelados' %}
-  <td class="pt-3.5 pb-6 max-w-xs">
+  <td class="py-3.5 max-w-0 w-full overflow-hidden">
     {% with motivo=visit.notas|default:visit.rejection_reason %}
     {% if motivo %}
-    <p class="text-sm text-base-content">{{ motivo }}</p>
+    <p class="text-sm text-base-content line-clamp-3">{{ motivo }}</p>
     {% else %}
     <span class="text-xs text-base-content/30">—</span>
     {% endif %}

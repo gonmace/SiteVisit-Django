@@ -48,7 +48,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        username = validated_data['email'].split('@')[0]
+        username = User.username_from_email(validated_data['email'])
         user = User(**validated_data, username=username, status=User.Status.INACTIVE,
                     role=User.Role.TECHNICIAN)
         user.set_password(password)

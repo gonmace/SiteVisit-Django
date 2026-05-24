@@ -10,8 +10,9 @@
 
 {% block content %}
 
-<!-- ── Fila 1: KPIs globales ── -->
-<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
+{% url 'manager:visits_approval' as url_visits %}
+<!-- ── Fila 1: Total · Pendientes · Activos · Completadas · Canceladas · Rechazadas ── -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
 
   <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
     <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Total</p>
@@ -19,44 +20,57 @@
     <p class="text-xs text-base-content/40 mt-1.5">visitas registradas</p>
   </div>
 
-  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+  <a href="{{ url_visits }}?tab=planificados" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Pendientes</p>
+    <p class="text-3xl font-black {% if pendientes_count %}text-warning{% else %}text-base-content/25{% endif %} mt-1 leading-none">{{ pendientes_count|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">por aprobar</p>
+  </a>
+
+  <a href="{{ url_visits }}?tab=en_ejecucion" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
     <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Activos</p>
     <p class="text-3xl font-black text-edit mt-1 leading-none">{{ active|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">en progreso ahora</p>
-  </div>
+  </a>
 
-  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+  <a href="{{ url_visits }}?tab=concluidos" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
     <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Completadas</p>
     <p class="text-3xl font-black text-success mt-1 leading-none">{{ by_status.completada|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">{{ completion_rate }}% del total</p>
-  </div>
+  </a>
 
-  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+  <a href="{{ url_visits }}?tab=cancelados" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
     <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Canceladas</p>
     <p class="text-3xl font-black text-error mt-1 leading-none">{{ by_status.cancelada|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">{{ cancellation_rate }}% del total</p>
-  </div>
+  </a>
 
-  <div class="col-span-2 md:col-span-1 bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Duración Prom. del Servicio</p>
-    {% if avg_duration %}
-    <p class="text-3xl font-black text-base-content mt-1 leading-none">{{ avg_duration }}<span class="text-base font-medium ml-0.5">min</span></p>
-    {% else %}
-    <p class="text-3xl font-black text-base-content/20 mt-1 leading-none">—</p>
-    {% endif %}
-    <p class="text-xs text-base-content/40 mt-1.5">trabajo completado</p>
-  </div>
+  <a href="{{ url_visits }}?tab=cancelados" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Rechazadas</p>
+    <p class="text-3xl font-black {% if rechazadas_count %}text-error{% else %}text-base-content/25{% endif %} mt-1 leading-none">{{ rechazadas_count|intcomma }}</p>
+    <p class="text-xs text-base-content/40 mt-1.5">{{ rechazo_rate }}% del total</p>
+  </a>
 
 </div>
 
-<!-- ── Fila 2: KPIs operacionales ── -->
-<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+<!-- ── Fila 2: Hoy · Completados hoy · Esta semana · Duración Prom. · T. Aprobación ── -->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
 
   <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
     <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Hoy</p>
     <p class="text-3xl font-black text-base-content mt-1 leading-none">{{ hoy_count|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">visitas programadas</p>
   </div>
+
+  <a href="{{ url_visits }}?tab=concluidos" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Completados hoy</p>
+    {% if completitud_hoy is not None %}
+    <p class="text-3xl font-black text-success mt-1 leading-none">{{ completitud_hoy }}<span class="text-base font-medium ml-0.5">%</span></p>
+    <p class="text-xs text-base-content/40 mt-1.5">{{ hoy_completadas }} de {{ hoy_count }}</p>
+    {% else %}
+    <p class="text-3xl font-black text-base-content/20 mt-1 leading-none">—</p>
+    <p class="text-xs text-base-content/40 mt-1.5">sin visitas hoy</p>
+    {% endif %}
+  </a>
 
   <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
     <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Esta semana</p>
@@ -65,15 +79,13 @@
   </div>
 
   <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Pendientes</p>
-    <p class="text-3xl font-black {% if pendientes_count %}text-warning{% else %}text-base-content/25{% endif %} mt-1 leading-none">{{ pendientes_count|intcomma }}</p>
-    <p class="text-xs text-base-content/40 mt-1.5">por aprobar</p>
-  </div>
-
-  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Rechazadas</p>
-    <p class="text-3xl font-black {% if rechazadas_count %}text-error{% else %}text-base-content/25{% endif %} mt-1 leading-none">{{ rechazadas_count|intcomma }}</p>
-    <p class="text-xs text-base-content/40 mt-1.5">{{ rechazo_rate }}% del total</p>
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Duración Prom. del Servicio</p>
+    {% if avg_duration %}
+    <p class="text-3xl font-black text-base-content mt-1 leading-none">{{ avg_duration }}<span class="text-base font-medium ml-0.5">min</span></p>
+    {% else %}
+    <p class="text-3xl font-black text-base-content/20 mt-1 leading-none">—</p>
+    {% endif %}
+    <p class="text-xs text-base-content/40 mt-1.5">trabajo completado</p>
   </div>
 
   <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
@@ -84,17 +96,6 @@
     <p class="text-3xl font-black text-base-content/20 mt-1 leading-none">—</p>
     {% endif %}
     <p class="text-xs text-base-content/40 mt-1.5">promedio aprobación</p>
-  </div>
-
-  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Completados hoy</p>
-    {% if completitud_hoy is not None %}
-    <p class="text-3xl font-black text-success mt-1 leading-none">{{ completitud_hoy }}<span class="text-base font-medium ml-0.5">%</span></p>
-    <p class="text-xs text-base-content/40 mt-1.5">{{ hoy_completadas }} de {{ hoy_count }}</p>
-    {% else %}
-    <p class="text-3xl font-black text-base-content/20 mt-1 leading-none">—</p>
-    <p class="text-xs text-base-content/40 mt-1.5">sin visitas hoy</p>
-    {% endif %}
   </div>
 
 </div>
@@ -124,20 +125,22 @@
 {% endif %}
 
 <!-- ── Charts: Tendencia + Doughnut ── -->
+{% if by_status.completada %}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
 
   <div class="lg:col-span-2 bg-base-100 rounded-2xl border border-base-200 p-5">
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-          <i class="fa-solid fa-chart-line text-[11px] text-primary"></i>
+        <div class="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center">
+          <i class="fa-solid fa-chart-line text-[11px] text-success"></i>
         </div>
         <p id="trendTitle" class="text-sm font-bold text-base-content">Últimos 7 días</p>
       </div>
       <div class="flex gap-0.5 bg-base-200 p-0.5 rounded-lg">
-        <button onclick="setTrendRange(7, this)"  class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold bg-base-100 shadow-sm text-base-content transition-all">7d</button>
-        <button onclick="setTrendRange(30, this)" class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold text-base-content/40 hover:text-base-content transition-all">30d</button>
-        <button onclick="setTrendRange(90, this)" class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold text-base-content/40 hover:text-base-content transition-all">90d</button>
+        <button onclick="setTrendRange(7, this)"   class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold bg-base-100 shadow-sm text-base-content transition-all">7d</button>
+        <button onclick="setTrendRange(30, this)"  class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold text-base-content/40 hover:text-base-content transition-all">30d</button>
+        <button onclick="setTrendRange(90, this)"  class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold text-base-content/40 hover:text-base-content transition-all">90d</button>
+        <button onclick="setTrendRange(180, this)" class="trend-btn px-2.5 py-1 rounded-md text-xs font-semibold text-base-content/40 hover:text-base-content transition-all">180d</button>
       </div>
     </div>
     <div style="height:200px;position:relative;">
@@ -158,8 +161,10 @@
   </div>
 
 </div>
+{% endif %}
 
 <!-- ── Distribución semanal + Técnicos ── -->
+{% if by_status.completada %}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
 
   <div class="lg:col-span-2 bg-base-100 rounded-2xl border border-base-200 p-5">
@@ -212,6 +217,7 @@
   </div>
 
 </div>
+{% endif %}
 
 <!-- ── Mapa de operaciones ── -->
 <div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden mb-5">
@@ -223,12 +229,16 @@
         </div>
         <p class="text-sm font-bold text-base-content">Mapa de operaciones</p>
       </div>
-      <button id="sites-toggle-btn" type="button"
-              class="btn btn-ghost btn-sm h-7 min-h-0 px-2.5 text-xs gap-1.5 border border-base-300 font-medium text-base-content/50 hover:text-base-content"
-              title="Mostrar todos los sitios del catálogo">
-        <i class="fa-solid fa-tower-cell text-[10px]"></i>
-        Todos los sitios
-      </button>
+      <label class="flex items-center gap-2 cursor-pointer select-none" title="Mostrar todos los sitios del catálogo">
+        <i class="fa-solid fa-tower-cell text-[10px] text-base-content/40"></i>
+        <span class="text-xs font-medium text-base-content/50">Sitios</span>
+        <input type="checkbox" id="sites-toggle-btn" class="toggle toggle-sm toggle-info" />
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer select-none" title="Mostrar u ocultar visitas en el mapa">
+        <i class="fa-solid fa-person-digging text-[10px] text-base-content/40"></i>
+        <span class="text-xs font-medium text-base-content/50">Visitas</span>
+        <input type="checkbox" id="sites-only-btn" class="toggle toggle-sm toggle-info" checked />
+      </label>
     </div>
     <!-- Filtros -->
     <form id="map-filter-form" class="flex flex-wrap items-center gap-2">
@@ -255,14 +265,20 @@
         {% endfor %}
       </select>
       {% endif %}
+      <!-- Sitio autocomplete -->
+      <div id="map-site-wrapper">
+        <input type="text" id="map-site-display" placeholder="Todos los sitios"
+               autocomplete="off"
+               class="input input-bordered input-sm h-8 min-h-0 text-xs w-36">
+        <input type="hidden" name="site_code" id="map-site-code">
+      </div>
+      <ul id="map-site-dropdown"
+          class="fixed z-[9999] w-64 bg-base-100 border border-base-300 rounded-lg shadow-lg hidden max-h-52 overflow-y-auto text-xs">
+      </ul>
       <input type="date" name="date_from" value="{{ map_date_from }}"
              class="input input-bordered input-sm h-8 min-h-0 text-xs w-32">
       <input type="date" name="date_to" value="{{ map_date_to }}"
              class="input input-bordered input-sm h-8 min-h-0 text-xs w-32">
-      <button type="submit" class="btn btn-info btn-sm h-8 min-h-0 px-3">
-        <i class="fa-solid fa-magnifying-glass text-xs"></i>
-        Filtrar
-      </button>
       <button type="button" id="map-clear-btn" class="btn btn-ghost btn-sm h-8 min-h-0 px-3 text-xs">
         Limpiar
       </button>
@@ -287,123 +303,130 @@
   </div>
 </div>
 
-<!-- ── Top Técnicos + Top Sitios + Empresa ── -->
-<div class="grid grid-cols-1 lg:grid-cols-2 {% if by_company %}xl:grid-cols-3{% endif %} gap-4">
+<!-- ── Top Técnicos + Top Sitios ── -->
+{% if top_techs or top_sites or by_company %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
   <!-- Top técnicos -->
-  <div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden">
-    <div class="px-5 py-3.5 border-b border-base-200 flex items-center gap-2">
-      <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-        <i class="fa-solid fa-ranking-star text-[11px] text-primary"></i>
-      </div>
-      <p class="text-sm font-bold text-base-content">Top Técnicos</p>
-    </div>
-    {% if top_techs %}
-    <div class="divide-y divide-base-200/60">
-      {% for tech in top_techs %}
-      <div class="flex items-center gap-3 px-5 py-3 hover:bg-primary/4 transition-colors">
-        <span class="text-[11px] text-base-content/20 font-mono tabular-nums w-4 shrink-0 text-right">{{ forloop.counter }}</span>
-        <div class="w-7 h-7 rounded-full bg-info/10 flex items-center justify-center shrink-0">
-          <span class="text-info text-[10px] font-bold leading-none">{{ tech.technician__first_name|slice:":1" }}{{ tech.technician__last_name|slice:":1" }}</span>
-        </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-semibold text-base-content leading-tight truncate">{{ tech.technician__first_name }} {{ tech.technician__last_name }}</p>
-          <div class="w-full bg-base-200 rounded-full h-1 mt-1.5">
-            <div class="h-1 rounded-full bg-primary transition-all" style="width:{% widthratio tech.count max_tech_count 100 %}%"></div>
-          </div>
-        </div>
-        <span class="text-sm font-bold text-base-content tabular-nums shrink-0">{{ tech.count|intcomma }}</span>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="px-5 py-12 text-center">
-      <p class="text-sm text-base-content/25">Sin datos</p>
-    </div>
-    {% endif %}
-  </div>
-
-  <!-- Top sitios -->
+  {% if top_techs %}
   <div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden">
     <div class="px-5 py-3.5 border-b border-base-200 flex items-center gap-2">
       <div class="w-7 h-7 rounded-lg bg-info/10 flex items-center justify-center">
-        <i class="fa-solid fa-tower-cell text-[11px] text-info"></i>
+        <i class="fa-solid fa-ranking-star text-[11px] text-info"></i>
       </div>
-      <p class="text-sm font-bold text-base-content">Top Sitios</p>
+      <p class="text-sm font-bold text-base-content">Top Técnicos</p>
     </div>
-    {% if top_sites %}
     <div class="divide-y divide-base-200/60">
-      {% for site in top_sites %}
-      <div class="flex items-center gap-3 px-5 py-3 hover:bg-primary/4 transition-colors">
+      {% for tech in top_techs %}
+      <div class="flex items-center gap-3 px-5 py-3 hover:bg-base-200/40 transition-colors">
         <span class="text-[11px] text-base-content/20 font-mono tabular-nums w-4 shrink-0 text-right">{{ forloop.counter }}</span>
+        <div class="w-7 h-7 rounded-full bg-info/10 flex items-center justify-center shrink-0">
+          <span class="text-info text-[10px] font-bold leading-none">{{ tech.first_name|slice:":1" }}{{ tech.last_name|slice:":1" }}</span>
+        </div>
         <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <p class="text-sm font-bold text-primary font-mono leading-none">{{ site.site__code }}</p>
-            {% if site.site__operator_code %}
-            <span class="text-xs text-info font-mono">{{ site.site__operator_code }}</span>
-            {% endif %}
-          </div>
-          <p class="text-xs text-base-content/35 truncate mt-0.5">{{ site.site__name }}</p>
-          <div class="w-full bg-base-200 rounded-full h-1 mt-1.5">
-            <div class="h-1 rounded-full bg-info transition-all" style="width:{% widthratio site.count max_site_count 100 %}%"></div>
+          <p class="text-sm font-semibold text-base-content leading-tight truncate">{{ tech.first_name }} {{ tech.last_name }}</p>
+          <div class="flex items-center gap-1 mt-1.5">
+            <div class="flex-1 bg-base-200 rounded-full h-1">
+              <div class="h-1 rounded-full bg-success transition-all" style="width:{% widthratio tech.count max_tech_count 100 %}%"></div>
+            </div>
+            <div class="flex-1 bg-base-200 rounded-full h-1">
+              <div class="h-1 rounded-full bg-error transition-all" style="width:{% widthratio tech.cancelled max_tech_count 100 %}%"></div>
+            </div>
           </div>
         </div>
-        <span class="text-sm font-bold text-base-content tabular-nums shrink-0">{{ site.count|intcomma }}</span>
+        <div class="text-right shrink-0">
+          <p class="text-sm font-bold text-success tabular-nums leading-none">{{ tech.count|intcomma }}</p>
+          {% if tech.cancelled %}<p class="text-xs font-semibold text-error tabular-nums leading-none mt-0.5">{{ tech.cancelled|intcomma }}</p>{% endif %}
+        </div>
       </div>
       {% endfor %}
-    </div>
-    {% else %}
-    <div class="px-5 py-12 text-center">
-      <p class="text-sm text-base-content/25">Sin datos</p>
-    </div>
-    {% endif %}
-  </div>
-
-  {% if by_company %}
-  <!-- Por empresa -->
-  <div class="bg-base-100 rounded-2xl border border-base-200 p-5">
-    <div class="flex items-center gap-2 mb-5">
-      <div class="w-7 h-7 rounded-lg bg-base-200 flex items-center justify-center">
-        <i class="fa-solid fa-building text-[11px] text-base-content/40"></i>
-      </div>
-      <p class="text-sm font-bold text-base-content">Por Empresa</p>
-    </div>
-    <div class="flex flex-col gap-5">
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full shrink-0" style="background:#E6007E"></div>
-            <span class="text-sm font-bold text-base-content">WOM</span>
-          </div>
-          <div>
-            <span class="text-lg font-black text-base-content tabular-nums">{{ by_company.wom|intcomma }}</span>
-            {% if total %}<span class="text-xs text-base-content/35 ml-1.5">{% widthratio by_company.wom total 100 %}%</span>{% endif %}
-          </div>
-        </div>
-        <div class="w-full bg-base-200 rounded-full h-1.5">
-          {% if total %}<div class="h-1.5 rounded-full transition-all" style="width:{% widthratio by_company.wom total 100 %}%;background:#E6007E"></div>{% endif %}
-        </div>
-      </div>
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-primary shrink-0"></div>
-            <span class="text-sm font-bold text-base-content">PTI</span>
-          </div>
-          <div>
-            <span class="text-lg font-black text-base-content tabular-nums">{{ by_company.pti|intcomma }}</span>
-            {% if total %}<span class="text-xs text-base-content/35 ml-1.5">{% widthratio by_company.pti total 100 %}%</span>{% endif %}
-          </div>
-        </div>
-        <div class="w-full bg-base-200 rounded-full h-1.5">
-          {% if total %}<div class="h-1.5 rounded-full bg-secondary transition-all" style="width:{% widthratio by_company.pti total 100 %}%"></div>{% endif %}
-        </div>
-      </div>
     </div>
   </div>
   {% endif %}
 
+  <!-- Columna derecha: Top Sitios + Por Empresa -->
+  {% if top_sites or by_company %}
+  <div class="flex flex-col gap-4">
+
+    {% if top_sites %}
+    <div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-base-200 flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-info/10 flex items-center justify-center">
+          <i class="fa-solid fa-tower-cell text-[11px] text-info"></i>
+        </div>
+        <p class="text-sm font-bold text-base-content">Top Sitios</p>
+      </div>
+      <div class="divide-y divide-base-200/60">
+        {% for site in top_sites %}
+        <div class="flex items-center gap-3 px-5 py-3 hover:bg-primary/4 transition-colors">
+          <span class="text-[11px] text-base-content/20 font-mono tabular-nums w-4 shrink-0 text-right">{{ forloop.counter }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-bold text-primary font-mono leading-none">{{ site.site__code }}</p>
+              {% if site.site__operator_code %}
+              <span class="text-xs text-info font-mono">{{ site.site__operator_code }}</span>
+              {% endif %}
+            </div>
+            <p class="text-xs text-base-content/35 truncate mt-0.5">{{ site.site__name }}</p>
+            <div class="w-full bg-base-200 rounded-full h-1 mt-1.5">
+              <div class="h-1 rounded-full bg-info transition-all" style="width:{% widthratio site.count max_site_count 100 %}%"></div>
+            </div>
+          </div>
+          <span class="text-sm font-bold text-base-content tabular-nums shrink-0">{{ site.count|intcomma }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if by_company %}
+    <div class="bg-base-100 rounded-2xl border border-base-200 p-5">
+      <div class="flex items-center gap-2 mb-5">
+        <div class="w-7 h-7 rounded-lg bg-base-200 flex items-center justify-center">
+          <i class="fa-solid fa-building text-[11px] text-base-content/40"></i>
+        </div>
+        <p class="text-sm font-bold text-base-content">Por Empresa</p>
+      </div>
+      <div class="flex flex-col gap-5">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full shrink-0" style="background:#E6007E"></div>
+              <span class="text-sm font-bold text-base-content">WOM</span>
+            </div>
+            <div>
+              <span class="text-lg font-black text-base-content tabular-nums">{{ by_company.wom|intcomma }}</span>
+              {% if total %}<span class="text-xs text-base-content/35 ml-1.5">{% widthratio by_company.wom total 100 %}%</span>{% endif %}
+            </div>
+          </div>
+          <div class="w-full bg-base-200 rounded-full h-1.5">
+            {% if total %}<div class="h-1.5 rounded-full transition-all" style="width:{% widthratio by_company.wom total 100 %}%;background:#E6007E"></div>{% endif %}
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-primary shrink-0"></div>
+              <span class="text-sm font-bold text-base-content">PTI</span>
+            </div>
+            <div>
+              <span class="text-lg font-black text-base-content tabular-nums">{{ by_company.pti|intcomma }}</span>
+              {% if total %}<span class="text-xs text-base-content/35 ml-1.5">{% widthratio by_company.pti total 100 %}%</span>{% endif %}
+            </div>
+          </div>
+          <div class="w-full bg-base-200 rounded-full h-1.5">
+            {% if total %}<div class="h-1.5 rounded-full bg-secondary transition-all" style="width:{% widthratio by_company.pti total 100 %}%"></div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
 </div>
+{% endif %}
 
 {% endblock %}
 
@@ -413,17 +436,43 @@
 (function () {
   'use strict';
 
-  var isDark      = document.documentElement.getAttribute('data-theme') === 'dark';
-  var gridColor   = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-  var labelColor  = isDark ? 'rgba(242,242,247,0.35)' : 'rgba(28,28,30,0.35)';
-  var cs          = getComputedStyle(document.documentElement);
-  var primaryColor  = cs.getPropertyValue('--color-primary').trim()  || '#E6007E';
-  var infoColor     = cs.getPropertyValue('--color-info').trim()     || '#3B82F6';
-  var warningColor  = cs.getPropertyValue('--color-warning').trim()  || '#F59E0B';
-  var successColor  = cs.getPropertyValue('--color-success').trim()  || '#10B981';
-  var errorColor    = cs.getPropertyValue('--color-error').trim()    || '#EF4444';
+  // Elementos centinela: DaisyUI cambia su color computado al cambiar el tema
+  var _lblEl = document.createElement('span');
+  _lblEl.className = 'text-base-content/40';
+  _lblEl.style.cssText = 'position:fixed;pointer-events:none;visibility:hidden;';
+  document.body.appendChild(_lblEl);
 
-  // Gradient para el área del trend
+  var _grdEl = document.createElement('span');
+  _grdEl.className = 'text-base-content/10';
+  _grdEl.style.cssText = 'position:fixed;pointer-events:none;visibility:hidden;';
+  document.body.appendChild(_grdEl);
+
+  // Plugin global: lee los colores de DaisyUI antes de cada update,
+  // así la leyenda (que se genera durante update, no durante draw) recibe el color correcto
+  Chart.register({
+    id: 'daisyTheme',
+    beforeUpdate: function (chart) {
+      var labelColor = getComputedStyle(_lblEl).color;
+      var gridColor  = getComputedStyle(_grdEl).color;
+
+      var scales = chart.options.scales || {};
+      Object.keys(scales).forEach(function (k) {
+        var s = scales[k];
+        if (s.ticks) s.ticks.color = labelColor;
+        if (s.grid && s.grid.display !== false) s.grid.color = gridColor;
+      });
+      var legend = (chart.options.plugins || {}).legend;
+      if (legend && legend.labels) legend.labels.color = labelColor;
+    }
+  });
+
+  var cs           = getComputedStyle(document.documentElement);
+  var primaryColor = cs.getPropertyValue('--color-primary').trim()  || '#E6007E';
+  var infoColor    = cs.getPropertyValue('--color-info').trim()     || '#3B82F6';
+  var warningColor = cs.getPropertyValue('--color-warning').trim()  || '#F59E0B';
+  var successColor = cs.getPropertyValue('--color-success').trim()  || '#10B981';
+  var errorColor   = cs.getPropertyValue('--color-error').trim()    || '#EF4444';
+
   function makeGradient(ctx, color) {
     var gradient = ctx.createLinearGradient(0, 0, 0, 200);
     gradient.addColorStop(0, color + '28');
@@ -432,119 +481,139 @@
   }
 
   var trendCanvas = document.getElementById('trendChart');
-  var trendCtx    = trendCanvas.getContext('2d');
-  var trendRanges = JSON.parse('{{ trend_ranges_json|escapejs }}');
-  var rangeTitles = { '7': 'Últimos 7 días', '30': 'Últimos 30 días', '90': 'Últimas 13 semanas' };
+  if (trendCanvas) {
+    var trendCtx    = trendCanvas.getContext('2d');
+    var trendRanges = JSON.parse('{{ trend_ranges_json|escapejs }}');
+    var rangeTitles = { '7': 'Últimos 7 días', '30': 'Últimos 30 días', '90': 'Últimas 13 semanas', '180': 'Últimas 26 semanas' };
 
-  var trendChart = new Chart(trendCtx, {
-    type: 'line',
-    data: {
-      labels: JSON.parse('{{ trend_labels_json|escapejs }}'),
-      datasets: [{
-        label: 'Visitas',
-        data: JSON.parse('{{ trend_data_json|escapejs }}'),
-        borderColor: primaryColor,
-        backgroundColor: makeGradient(trendCtx, primaryColor),
-        fill: true,
-        tension: 0.4,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        pointBackgroundColor: primaryColor,
-        pointBorderColor: 'transparent',
-        borderWidth: 2,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, padding: 10 } },
-      scales: {
-        x: { grid: { color: gridColor }, border: { display: false }, ticks: { color: labelColor, font: { size: 11 }, maxRotation: 0 } },
-        y: { grid: { color: gridColor }, border: { display: false }, ticks: { color: labelColor, font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true }
+    var trendChart = new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: JSON.parse('{{ trend_labels_json|escapejs }}'),
+        datasets: [{
+          label: 'Visitas',
+          data: JSON.parse('{{ trend_data_json|escapejs }}'),
+          borderColor: successColor,
+          backgroundColor: makeGradient(trendCtx, successColor),
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: successColor,
+          pointBorderColor: 'transparent',
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, padding: 10 } },
+        scales: {
+          x: { border: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0 } },
+          y: { border: { display: false }, ticks: { font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true }
+        }
       }
-    }
-  });
-
-  window.setTrendRange = function (days, btn) {
-    var key   = String(days);
-    var range = trendRanges[key];
-    trendChart.data.labels = range.labels;
-    trendChart.data.datasets[0].data = range.data;
-    trendChart.data.datasets[0].backgroundColor = makeGradient(trendCtx, primaryColor);
-    trendChart.update();
-    document.getElementById('trendTitle').textContent = rangeTitles[key];
-    document.querySelectorAll('.trend-btn').forEach(function (b) {
-      b.classList.remove('bg-base-100', 'shadow-sm', 'text-base-content');
-      b.classList.add('text-base-content/40');
     });
-    btn.classList.add('bg-base-100', 'shadow-sm', 'text-base-content');
-    btn.classList.remove('text-base-content/40');
-  };
 
-  // Barras — día de semana (0=Lun … 4=Vie · 5=Sáb · 6=Dom)
-  var weekdayBg     = [0,1,2,3,4,5,6].map(function(i){ return (i>=5 ? primaryColor : infoColor) + '28'; });
-  var weekdayBorder = [0,1,2,3,4,5,6].map(function(i){ return (i>=5 ? primaryColor : infoColor) + '90'; });
+    window.setTrendRange = function (days, btn) {
+      var key   = String(days);
+      var range = trendRanges[key];
+      trendChart.data.labels = range.labels;
+      trendChart.data.datasets[0].data = range.data;
+      trendChart.data.datasets[0].backgroundColor = makeGradient(trendCtx, successColor);
+      trendChart.update();
+      document.getElementById('trendTitle').textContent = rangeTitles[key];
+      document.querySelectorAll('.trend-btn').forEach(function (b) {
+        b.classList.remove('bg-base-100', 'shadow-sm', 'text-base-content');
+        b.classList.add('text-base-content/40');
+      });
+      btn.classList.add('bg-base-100', 'shadow-sm', 'text-base-content');
+      btn.classList.remove('text-base-content/40');
+      try { localStorage.setItem('dash_trend_range', key); } catch(e) {}
+    };
 
-  new Chart(document.getElementById('weekdayChart'), {
-    type: 'bar',
-    data: {
-      labels: JSON.parse('{{ weekday_labels_json|escapejs }}'),
-      datasets: [{
-        label: 'Visitas',
-        data: JSON.parse('{{ weekday_data_json|escapejs }}'),
-        backgroundColor: weekdayBg,
-        borderColor: weekdayBorder,
-        borderWidth: 1.5,
-        borderRadius: 8,
-        borderSkipped: false,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, padding: 10 } },
-      scales: {
-        x: { grid: { display: false }, border: { display: false }, ticks: { color: labelColor, font: { size: 11 } } },
-        y: { grid: { color: gridColor }, border: { display: false }, ticks: { color: labelColor, font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true }
-      }
+    // Restaurar rango guardado
+    var savedRange = null;
+    try { savedRange = localStorage.getItem('dash_trend_range'); } catch(e) {}
+    if (savedRange && trendRanges[savedRange]) {
+      var savedBtn = document.querySelector('.trend-btn[onclick*="' + savedRange + '"]');
+      if (savedBtn) setTrendRange(parseInt(savedRange, 10), savedBtn);
     }
-  });
+  }
 
-  // Doughnut — estados
-  new Chart(document.getElementById('statusChart'), {
-    type: 'doughnut',
-    data: {
-      labels: ['Programado', 'En ejecución', 'Completado', 'Cancelado'],
-      datasets: [{
-        data: [{{ by_status.programada }}, {{ active }}, {{ by_status.completada }}, {{ by_status.cancelada }}],
-        backgroundColor: [infoColor, warningColor, successColor, errorColor],
-        borderWidth: 0,
-        hoverOffset: 6,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '72%',
-      plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: {
-            color: labelColor,
-            font: { size: 10 },
-            boxWidth: 8,
-            boxHeight: 8,
-            padding: 10,
-            usePointStyle: true,
-            pointStyle: 'circle',
-            filter: function (item, data) { return data.datasets[0].data[item.index] > 0; }
-          }
-        },
-        tooltip: { padding: 10 }
+  var weekdayCanvas = document.getElementById('weekdayChart');
+  if (weekdayCanvas) {
+    var weekdayBg     = [0,1,2,3,4,5,6].map(function(i){ return (i>=5 ? primaryColor : infoColor) + '28'; });
+    var weekdayBorder = [0,1,2,3,4,5,6].map(function(i){ return (i>=5 ? primaryColor : infoColor) + '90'; });
+
+    new Chart(weekdayCanvas, {
+      type: 'bar',
+      data: {
+        labels: JSON.parse('{{ weekday_labels_json|escapejs }}'),
+        datasets: [{
+          label: 'Visitas',
+          data: JSON.parse('{{ weekday_data_json|escapejs }}'),
+          backgroundColor: weekdayBg,
+          borderColor: weekdayBorder,
+          borderWidth: 1.5,
+          borderRadius: 8,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, padding: 10 } },
+        scales: {
+          x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11 } } },
+          y: { border: { display: false }, ticks: { font: { size: 11 }, stepSize: 1, precision: 0 }, beginAtZero: true }
+        }
       }
-    }
-  });
+    });
+  }
+
+  var statusCanvas = document.getElementById('statusChart');
+  if (statusCanvas) {
+    new Chart(statusCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Programado', 'En ejecución', 'Completado', 'Cancelado'],
+        datasets: [{
+          data: [{{ by_status.programada }}, {{ active }}, {{ by_status.completada }}, {{ by_status.cancelada }}],
+          backgroundColor: [infoColor, warningColor, successColor, errorColor],
+          borderWidth: 0,
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '72%',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'bottom',
+            labels: {
+              font: { size: 10 },
+              boxWidth: 8,
+              boxHeight: 8,
+              padding: 10,
+              usePointStyle: true,
+              pointStyle: 'circle',
+              filter: function (item, data) { return data.datasets[0].data[item.index] > 0; }
+            }
+          },
+          tooltip: { padding: 10 }
+        }
+      }
+    });
+  }
+
+  // Redibujar todos los charts cuando cambia el tema para que el plugin beforeDraw releia las CSS vars
+  new MutationObserver(function () {
+    Object.values(Chart.instances).forEach(function (c) { c.update('none'); });
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
 })();
 </script>
 
@@ -581,6 +650,31 @@
   // Toggle: mostrar todos los sitios del catálogo
   var showAllSites = false;
 
+  // Toggle: solo sitios (ocultar visitas)
+  var sitesOnlyMode = false;
+
+  var sitesOnlyBtn  = document.getElementById('sites-only-btn');
+
+  // checked = visitas visibles; unchecked = visitas ocultas (solo sitios)
+  sitesOnlyBtn.addEventListener('change', function () {
+    var visitsVisible = this.checked;
+    sitesOnlyMode = !visitsVisible;
+    if (!visitsVisible) {
+      map.removeLayer(clusterGroup);
+      showAllSites = true;
+      toggleBtn.checked = true;
+      map.addLayer(allSitesGroup);
+    } else {
+      map.addLayer(clusterGroup);
+      if (!toggleBtn.checked) {
+        showAllSites = false;
+        map.removeLayer(allSitesGroup);
+      }
+    }
+    updateFormState();
+    saveMapFilters();
+  });
+
   var map = L.map('operations-map', { zoomControl: true });
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
@@ -592,9 +686,8 @@
   var clusterGroup = L.markerClusterGroup({ chunkedLoading: true });
   map.addLayer(clusterGroup);
 
-  // Capa 2: globos balloon para todos los sitios del catálogo (toggle)
+  // Capa 2: globos balloon para todos los sitios del catálogo (el toggle la añade/quita)
   var allSitesGroup = L.layerGroup();
-  map.addLayer(allSitesGroup);
 
   // ── Iconos ──
 
@@ -662,9 +755,6 @@
     return params.toString();
   }
 
-  // IDs de sitios con visitas en el filtro actual (para el ghost layer)
-  var filteredSiteIds = new Set();
-
   function loadMap() {
     var loading  = document.getElementById('map-loading');
     var emptyMsg = document.getElementById('map-empty');
@@ -678,7 +768,6 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         clusterGroup.clearLayers();
-        filteredSiteIds = new Set();
 
         var visits = data.visits || [];
 
@@ -691,16 +780,11 @@
         var bounds = [];
         visits.forEach(function (v) {
           if (v.lat == null || v.lng == null) return;
-          filteredSiteIds.add(v.site_id);
           var marker = L.marker([v.lat, v.lng], { icon: visitIcon(v.status) });
           marker.bindPopup(buildVisitPopup(v), { maxWidth: 250 });
           clusterGroup.addLayer(marker);
           bounds.push([v.lat, v.lng]);
         });
-
-        if (showAllSites) {
-          refreshAllSitesLayer();
-        }
 
         if (bounds.length) {
           map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
@@ -719,56 +803,224 @@
       });
   }
 
-  // ── Capa de todos los sitios (toggle) ──
-  // Sitios con visitas muestran AMBOS iconos: el círculo de visita Y el globo del catálogo
-
-  function refreshAllSitesLayer() {
-    allSitesGroup.clearLayers();
-    if (!showAllSites) return;
-
-    fetch('/api/v1/sites/', { credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        var sites = Array.isArray(data) ? data : (data.results || []);
-        sites.forEach(function (site) {
-          var marker = L.marker([site.latitude, site.longitude], { icon: ghostSiteIcon(site.company) });
-          marker.bindPopup(buildGhostPopup(site), { maxWidth: 220 });
-          allSitesGroup.addLayer(marker);
-        });
-      })
-      .catch(function () {});
-  }
+  // Precarga única del catálogo de sitios al iniciar
+  fetch('/api/v1/sites/', { credentials: 'same-origin' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var sites = Array.isArray(data) ? data : (data.results || []);
+      sites.forEach(function (site) {
+        if (site.latitude == null || site.longitude == null) return;
+        var marker = L.marker([site.latitude, site.longitude], { icon: ghostSiteIcon(site.company) });
+        marker.bindPopup(buildGhostPopup(site), { maxWidth: 220 });
+        allSitesGroup.addLayer(marker);
+      });
+      if (showAllSites) map.addLayer(allSitesGroup);
+    })
+    .catch(function () {});
 
   // ── Toggle ──
 
   var toggleBtn = document.getElementById('sites-toggle-btn');
-  toggleBtn.addEventListener('click', function () {
-    showAllSites = !showAllSites;
+  toggleBtn.addEventListener('change', function () {
+    showAllSites = this.checked;
     if (showAllSites) {
-      toggleBtn.classList.remove('btn-ghost', 'text-base-content/50');
-      toggleBtn.classList.add('btn-secondary');
-      toggleBtn.style.color = '';
-      refreshAllSitesLayer();
+      map.addLayer(allSitesGroup);
     } else {
-      toggleBtn.classList.add('btn-ghost', 'text-base-content/50');
-      toggleBtn.classList.remove('btn-secondary');
-      allSitesGroup.clearLayers();
+      map.removeLayer(allSitesGroup);
+      if (sitesOnlyMode) {
+        sitesOnlyMode = false;
+        sitesOnlyBtn.checked = false;
+        map.addLayer(clusterGroup);
+        updateFormState();
+      }
     }
-    // Actualizar el texto del resumen
-    var summaryT = document.getElementById('map-summary-text');
-    if (summaryT && summaryT.textContent) {
-      var base = summaryT.textContent.replace(/ \(\+ todos los sitios del catálogo\)/, '');
-      summaryT.textContent = base + (showAllSites ? ' (+ todos los sitios del catálogo)' : '');
-    }
+    saveMapFilters();
   });
 
-  // Inicializar
+  var MAP_KEY = 'dash_map_filters';
+
+  function updateFormState() {
+    var form = document.getElementById('map-filter-form');
+    var visitsActive = !sitesOnlyMode;
+    ['status', 'technician', 'date_from', 'date_to'].forEach(function (name) {
+      var el = form.querySelector('[name="' + name + '"]');
+      if (el) el.disabled = !visitsActive;
+    });
+  }
+
+  function saveMapFilters() {
+    var form = document.getElementById('map-filter-form');
+    var data = new FormData(form);
+    var obj  = {};
+    data.forEach(function (val, key) { obj[key] = val; });
+    obj._sites_only     = sitesOnlyMode ? '1' : '0';
+    obj._show_all_sites = showAllSites  ? '1' : '0';
+    try { localStorage.setItem(MAP_KEY, JSON.stringify(obj)); } catch(e) {}
+  }
+
+  function restoreMapFilters() {
+    var raw = null;
+    try { raw = localStorage.getItem(MAP_KEY); } catch(e) {}
+    if (!raw) return;
+    var obj;
+    try { obj = JSON.parse(raw); } catch(e) { return; }
+    var form = document.getElementById('map-filter-form');
+    Object.keys(obj).forEach(function (key) {
+      if (key.charAt(0) === '_') return;
+      var el = form.querySelector('[name="' + key + '"]');
+      if (el) el.value = obj[key];
+    });
+    if (obj._sites_only === '1') {
+      sitesOnlyMode        = true;
+      sitesOnlyBtn.checked = false;
+      showAllSites         = true;
+      toggleBtn.checked    = true;
+      map.removeLayer(clusterGroup);
+    } else if (obj._show_all_sites === '1') {
+      showAllSites      = true;
+      toggleBtn.checked = true;
+    }
+  }
+
+  restoreMapFilters();
+  updateFormState();
   loadMap();
 
   document.getElementById('map-filter-form').addEventListener('submit', function (e) {
     e.preventDefault();
+    saveMapFilters();
     loadMap();
   });
+
+  document.getElementById('map-filter-form').querySelectorAll('select, input[type="date"]').forEach(function (el) {
+    el.addEventListener('change', function () {
+      saveMapFilters();
+      loadMap();
+    });
+  });
+
+  // ── Autocomplete sitio ──
+  (function () {
+    var display  = document.getElementById('map-site-display');
+    var hidden   = document.getElementById('map-site-code');
+    var dropdown = document.getElementById('map-site-dropdown');
+    var timer    = null;
+    var activeIdx = -1;
+
+    function positionDropdown() {
+      var rect = display.getBoundingClientRect();
+      dropdown.style.top  = (rect.bottom + 2) + 'px';
+      dropdown.style.left = rect.left + 'px';
+      dropdown.style.width = '260px';
+    }
+
+    function closeDropdown() {
+      dropdown.classList.add('hidden');
+      dropdown.innerHTML = '';
+      activeIdx = -1;
+    }
+
+    function selectableItems() {
+      return Array.from(dropdown.querySelectorAll('li[data-selectable]'));
+    }
+
+    function setActive(idx) {
+      var items = selectableItems();
+      items.forEach(function (el) { el.classList.remove('bg-base-200'); });
+      activeIdx = idx;
+      if (idx >= 0 && idx < items.length) {
+        items[idx].classList.add('bg-base-200');
+        items[idx].scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function selectActive() {
+      var items = selectableItems();
+      if (activeIdx < 0 || activeIdx >= items.length) return;
+      var el = items[activeIdx];
+      var lat = parseFloat(el.getAttribute('data-lat'));
+      var lng = parseFloat(el.getAttribute('data-lng'));
+      display.value = el.getAttribute('data-code');
+      hidden.value  = el.getAttribute('data-code');
+      if (!isNaN(lat) && !isNaN(lng)) map.flyTo([lat, lng], 15, { duration: 1.2 });
+      closeDropdown();
+      saveMapFilters();
+      loadMap();
+    }
+
+    display.addEventListener('input', function () {
+      clearTimeout(timer);
+      activeIdx = -1;
+      var q = display.value.trim();
+      if (q.length < 3) { hidden.value = ''; closeDropdown(); return; }
+      timer = setTimeout(function () {
+        fetch('{% url "manager:sites_search" %}?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+          .then(function (r) { return r.json(); })
+          .then(function (list) {
+            dropdown.innerHTML = '';
+            activeIdx = -1;
+            if (!list.length) {
+              var li = document.createElement('li');
+              li.className = 'px-3 py-2 text-base-content/40 italic';
+              li.textContent = 'Sin resultados';
+              dropdown.appendChild(li);
+            } else {
+              list.forEach(function (s) {
+                var li = document.createElement('li');
+                li.setAttribute('data-selectable', '');
+                li.setAttribute('data-code', s.code);
+                if (s.lat != null) li.setAttribute('data-lat', s.lat);
+                if (s.lng != null) li.setAttribute('data-lng', s.lng);
+                li.className = 'px-3 py-2 cursor-pointer hover:bg-base-200 border-b border-base-200 last:border-0';
+                var parts = [s.code];
+                if (s.operator_code) parts.push(s.operator_code);
+                if (s.name) parts.push(s.name);
+                li.textContent = parts.join(' · ');
+                li.addEventListener('mousedown', function (e) {
+                  e.preventDefault();
+                  display.value = s.code;
+                  hidden.value  = s.code;
+                  var lat = parseFloat(this.getAttribute('data-lat'));
+                  var lng = parseFloat(this.getAttribute('data-lng'));
+                  if (!isNaN(lat) && !isNaN(lng)) map.flyTo([lat, lng], 15, { duration: 1.2 });
+                  closeDropdown();
+                  saveMapFilters();
+                  loadMap();
+                });
+                dropdown.appendChild(li);
+              });
+            }
+            positionDropdown();
+            dropdown.classList.remove('hidden');
+          })
+          .catch(closeDropdown);
+      }, 280);
+    });
+
+    display.addEventListener('blur', function () {
+      setTimeout(closeDropdown, 150);
+      if (!hidden.value) display.value = '';
+    });
+
+    display.addEventListener('keydown', function (e) {
+      var items = selectableItems();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActive(Math.min(activeIdx + 1, items.length - 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActive(Math.max(activeIdx - 1, 0));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (activeIdx >= 0) selectActive();
+      } else if (e.key === 'Escape') {
+        hidden.value = ''; display.value = ''; closeDropdown(); saveMapFilters(); loadMap();
+      }
+    });
+
+    window.addEventListener('scroll', function () { if (!dropdown.classList.contains('hidden')) positionDropdown(); }, true);
+    window.addEventListener('resize', function () { if (!dropdown.classList.contains('hidden')) positionDropdown(); });
+  })();
 
   document.getElementById('map-clear-btn').addEventListener('click', function () {
     var form = document.getElementById('map-filter-form');
@@ -777,6 +1029,19 @@
     var dTo   = form.querySelector('[name="date_to"]');
     if (dFrom) dFrom.value = '{{ map_date_from }}';
     if (dTo)   dTo.value   = '{{ map_date_to }}';
+    document.getElementById('map-site-display').value = '';
+    document.getElementById('map-site-code').value    = '';
+    try { localStorage.removeItem(MAP_KEY); } catch(e) {}
+    // Resetear toggles a estado inicial
+    if (sitesOnlyMode || showAllSites) {
+      sitesOnlyMode        = false;
+      showAllSites         = false;
+      sitesOnlyBtn.checked = true;   // visitas visibles
+      toggleBtn.checked    = false;
+      map.removeLayer(allSitesGroup);
+      if (!map.hasLayer(clusterGroup)) map.addLayer(clusterGroup);
+    }
+    updateFormState();
     loadMap();
   });
 

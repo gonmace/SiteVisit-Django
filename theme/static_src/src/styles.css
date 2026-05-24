@@ -6,7 +6,9 @@
 @source "../../../sites";
 @source "../../../visits";
 @source "../../../dashboard";
-@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/forms" {
+  strategy: class;
+}
 @plugin "@tailwindcss/typography";
 @plugin "daisyui" {
   themes: light --default, dark;
@@ -26,23 +28,23 @@
   --color-primary-content: #ffffff;
   --color-secondary: #4a4d4e;
   --color-secondary-content: #ffffff;
-  --color-accent: #4f46e5;
-  --color-accent-content: #ffffff;
-  --color-neutral: #727576;
+  --color-accent: #f59e0b;
+  --color-accent-content: #1c1c1e;
+  --color-neutral: #3a3a3c;
   --color-neutral-content: #ffffff;
   --color-info: #0284c7;
   --color-info-content: #ffffff;
   --color-success: #16a34a;
   --color-success-content: #ffffff;
-  --color-warning: #d97706;
-  --color-warning-content: #ffffff;
+  --color-warning: #eab308;
+  --color-warning-content: #1c1c1e;
   --color-error: #b91c1c;
   --color-error-content: #ffffff;
-  --color-edit:           #eab308;
+  --color-edit:           #16a34a;
   --color-edit-content:   #fff;
-  --color-delete:         #ea580c;
+  --color-delete:         #cc0000;
   --color-delete-content: #fff;
-  --color-view:           #3b82f6;
+  --color-view:           #2563eb;
   --color-view-content:   #fff;
   --radius-selector: 0.5rem;
   --radius-field: 0.625rem;
@@ -64,23 +66,23 @@
   --color-primary-content: #ffffff;
   --color-secondary: #8e8e93;
   --color-secondary-content: #ffffff;
-  --color-accent: #818cf8;
-  --color-accent-content: #ffffff;
-  --color-neutral: #636366;
-  --color-neutral-content: #ffffff;
+  --color-accent: #fcd34d;
+  --color-accent-content: #1c1c1e;
+  --color-neutral: #d1d1d6;
+  --color-neutral-content: #1c1c1e;
   --color-info: #38bdf8;
   --color-info-content: #ffffff;
   --color-success: #34d399;
   --color-success-content: #ffffff;
-  --color-warning: #fbbf24;
+  --color-warning: #fde047;
   --color-warning-content: #1c1c1e;
   --color-error: #f87171;
   --color-error-content: #1c1c1e;
-  --color-edit:#facc15;
-  --color-edit-content: #000;
-  --color-delete:#fb923c;
+  --color-edit:           #34d399;
+  --color-edit-content:   #1c1c1e;
+  --color-delete:         #ff4040;
   --color-delete-content: #fff;
-  --color-view: #60a5fa;
+  --color-view:           #60a5fa;
   --color-view-content:   #fff;
   --radius-selector: 0.5rem;
   --radius-field: 0.625rem;
@@ -98,12 +100,12 @@ html {
 
 /* Registrar colores custom como utilidades Tailwind (text-edit, text-delete, text-view) */
 @theme {
-  --color-edit:   #eab308;
-  --color-delete: #ea580c;
-  --color-view:   #3b82f6;
+  --color-edit:   #16a34a;
+  --color-delete: #cc0000;
+  --color-view:   #2563eb;
 }
 
-/* Tabla — DaisyUI v5 elimina bordes por defecto */
+/* Tabla — DaisyUI v5 */
 @layer components {
   .table thead tr {
     background-color: var(--color-base-200);
@@ -113,10 +115,40 @@ html {
     padding-bottom: 0.75rem;
     border-bottom: 2px solid var(--color-base-300);
   }
+  /* Filas alternas */
+  .table tbody tr:nth-child(even) {
+    background-color: color-mix(in oklab, var(--color-base-200) 50%, var(--color-base-100));
+  }
   .table tbody tr {
-    border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 7%, transparent);
+    border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 6%, transparent);
+    transition: background-color 0.12s ease;
   }
   .table tbody tr:last-child { border-bottom: none; }
+  /* Hover con tinte primario */
+  .table tbody tr:hover {
+    background-color: color-mix(in oklab, var(--color-primary) 8%, transparent) !important;
+  }
+}
+
+/* Indicador de estado en filas de tabla — barra vertical centrada */
+@layer components {
+  .status-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+  }
+  .status-bar::after {
+    content: '';
+    display: block;
+    width: 2px;
+    height: calc(100% - 6px);
+    border-radius: 9999px;
+    background-color: currentColor;
+    opacity: 0.6;
+  }
 }
 
 /* ======================================================================
@@ -214,6 +246,28 @@ html {
   color:            var(--color-neutral) !important;
   box-shadow:       0 1px 6px color-mix(in srgb, var(--color-neutral) 15%, transparent) !important;
 }
+
+/* Alert variants — color explícito para toasts */
+.alert-success {
+  background-color: color-mix(in srgb, var(--color-success) 12%, var(--color-base-100)) !important;
+  border-color:     var(--color-success) !important;
+  color:            var(--color-success) !important;
+}
+.alert-error {
+  background-color: color-mix(in srgb, var(--color-error) 12%, var(--color-base-100)) !important;
+  border-color:     var(--color-error) !important;
+  color:            var(--color-error) !important;
+}
+.alert-warning {
+  background-color: color-mix(in srgb, var(--color-warning) 12%, var(--color-base-100)) !important;
+  border-color:     var(--color-warning) !important;
+  color:            var(--color-warning) !important;
+}
+.alert-info {
+  background-color: color-mix(in srgb, var(--color-info) 12%, var(--color-base-100)) !important;
+  border-color:     var(--color-info) !important;
+  color:            var(--color-info) !important;
+}
 .btn-neutral:hover {
   background-color: color-mix(in srgb, var(--color-neutral) 28%, transparent) !important;
   border-color:     color-mix(in srgb, var(--color-neutral) 40%, transparent) !important;
@@ -251,6 +305,23 @@ html {
 .btn-view:hover {
   background-color: color-mix(in srgb, var(--color-view) 28%, transparent) !important;
   box-shadow:       0 2px 8px color-mix(in srgb, var(--color-view) 22%, transparent) !important;
+}
+
+/* 3D card elevation */
+.rounded-2xl.border-base-300 {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.60),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 3px 8px rgba(0, 0, 0, 0.07),
+    0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .rounded-2xl.border-base-300 {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.30),
+    0 3px 8px rgba(0, 0, 0, 0.35),
+    0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
 /* Compatibilidad input-bordered (DaisyUI v4 -> v5) */

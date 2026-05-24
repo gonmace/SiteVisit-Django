@@ -1,0 +1,172 @@
+{% load humanize %}
+{% if coordinators %}
+
+<!-- Mobile: cards -->
+<div class="md:hidden space-y-3">
+  {% for coord in coordinators %}
+  <div data-row="" class="bg-base-100 rounded-2xl border border-base-300 shadow-xs p-4 border-l-4 {% if coord.status == 2 %}border-l-success{% else %}border-l-error{% endif %}">
+    <div class="flex items-start gap-3">
+      <div class="flex flex-col items-center gap-1.5 shrink-0">
+        <div class="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
+          <span class="text-accent text-sm font-bold">
+            {{ coord.first_name|first|upper }}{{ coord.last_name|first|upper }}
+          </span>
+        </div>
+        {% if coord.company %}
+          <span class="badge badge-xs badge-outline opacity-40">{{ coord.company|upper }}</span>
+        {% endif %}
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-sm font-semibold text-base-content truncate">{{ coord.get_full_name|default:"—" }}</p>
+          <div class="flex items-center gap-0.5 shrink-0">
+            <button type="button" data-url="{% url 'manager:coordinator_edit' coord.pk %}"
+               onclick="openModalEdit(this.dataset.url,'coord-modal')"
+               class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+              <i class="fa-solid fa-pen text-xs"></i>
+            </button>
+            <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              data-url="{% url 'manager:coordinator_delete' coord.pk %}"
+              data-name="{{ coord.get_full_name|default:coord.email }}"
+              onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('[data-row]'),'coordinador','Los registros históricos se mantendrán. Esta acción no se puede deshacer.')">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </div>
+        </div>
+        <p class="text-xs text-base-content/40 mt-0.5 truncate">{{ coord.email }}</p>
+        {% if coord.cargo %}
+          <p class="text-xs text-base-content/30 mt-0.5">{{ coord.cargo }}</p>
+        {% endif %}
+        <div class="flex items-center gap-x-3 gap-y-1 mt-1.5">
+          {% if coord.phone %}
+            <span class="text-xs text-accent font-medium">{{ coord.phone }}</span>
+          {% endif %}
+          <form method="post" action="{% url 'manager:coordinator_toggle' coord.pk %}" class="ml-auto">
+            {% csrf_token %}
+            <div class="flex rounded-full border border-base-300 overflow-hidden text-[10px] font-medium">
+              <button type="button" name="status" value="active"
+                      onclick="confirmStatusChange(this,'Activo','El coordinador podrá iniciar sesión.','btn-success')"
+                      class="px-2.5 py-1 transition-colors {% if coord.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
+              <button type="button" name="status" value="inactive"
+                      onclick="confirmStatusChange(this,'Inactivo','El coordinador perderá el acceso de inmediato.','btn-error')"
+                      class="px-2.5 py-1 border-l border-base-300 transition-colors {% if coord.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Desktop: table -->
+<div class="hidden md:block bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Coordinador</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Empresa</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide">Teléfono</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-center">Estado</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for coord in coordinators %}
+        <tr class="hover:bg-primary/5 transition-colors">
+          <td class="py-3.5 relative pl-3">
+            <span class="status-bar {% if coord.status == 2 %}text-success{% else %}text-error{% endif %}"></span>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                <span class="text-accent text-xs font-bold">
+                  {{ coord.first_name|first|upper }}{{ coord.last_name|first|upper }}
+                </span>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-base-content">{{ coord.get_full_name|default:"—" }}</p>
+                <p class="text-xs text-base-content/40 mt-0.5">{{ coord.email }}</p>
+                {% if coord.cargo %}
+                  <p class="text-xs text-base-content/30">{{ coord.cargo }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td class="py-3.5">
+            {% if coord.company %}
+              <span class="badge badge-sm badge-outline">{{ coord.company|upper }}</span>
+            {% else %}
+              <span class="text-base-content/30 text-xs">—</span>
+            {% endif %}
+          </td>
+          <td class="py-3.5 text-sm text-base-content/60">
+            {{ coord.phone|default:"—" }}
+          </td>
+          <td class="py-3.5 text-center">
+            <form method="post" action="{% url 'manager:coordinator_toggle' coord.pk %}" class="inline-block">
+              {% csrf_token %}
+              <div class="flex rounded-full border border-base-300 overflow-hidden text-[10px] font-medium">
+                <button type="button" name="status" value="active"
+                        onclick="confirmStatusChange(this,'Activo','El coordinador podrá iniciar sesión.','btn-success')"
+                        class="px-2.5 py-0.5 transition-colors {% if coord.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
+                <button type="button" name="status" value="inactive"
+                        onclick="confirmStatusChange(this,'Inactivo','El coordinador perderá el acceso de inmediato.','btn-error')"
+                        class="px-2.5 py-0.5 border-l border-base-300 transition-colors {% if coord.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
+              </div>
+            </form>
+          </td>
+          <td class="py-3.5 text-center whitespace-nowrap">
+            <button type="button" data-url="{% url 'manager:coordinator_edit' coord.pk %}"
+               onclick="openModalEdit(this.dataset.url,'coord-modal')"
+               class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              data-url="{% url 'manager:coordinator_delete' coord.pk %}"
+              data-name="{{ coord.get_full_name|default:coord.email }}"
+              onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('tr'),'coordinador','Los registros históricos se mantendrán. Esta acción no se puede deshacer.')">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="flex justify-center items-center mt-6 gap-2">
+  {% if page_obj.has_previous %}
+    <a href="?q={{ q }}&page={{ page_obj.previous_page_number }}"
+       class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0">‹</a>
+  {% endif %}
+  <span class="text-sm text-base-content/50 px-3">
+    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+  </span>
+  {% if page_obj.has_next %}
+    <a href="?q={{ q }}&page={{ page_obj.next_page_number }}"
+       class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0">›</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs">
+  <div class="flex flex-col items-center justify-center py-20 px-8 text-center">
+    <div class="w-12 h-12 rounded-2xl bg-base-200 flex items-center justify-center mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+    </div>
+    <p class="text-sm font-medium text-base-content/40">
+      {% if q %}No se encontraron coordinadores{% else %}Sin coordinadores registrados{% endif %}
+    </p>
+    {% if not q %}
+      <a href="{% url 'manager:coordinator_create' %}" class="btn btn-success btn-sm mt-4 text-xs font-semibold">+ Agregar coordinador</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

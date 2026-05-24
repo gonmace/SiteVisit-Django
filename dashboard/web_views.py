@@ -1,14 +1,15 @@
 from datetime import timedelta
 import json
 
-from django.db.models import Count
+from django.db.models import Count, Case, When, IntegerField, Q
 from django.db.models.functions import ExtractWeekDay
 from django.utils import timezone
 from django.views.generic import TemplateView
 
+from core.mixins import ManagerRequiredMixin
+from dashboard.views import _avg_work_duration_minutes
 from users.models import User
 from visits.models import Visit
-from visits.web_views import ManagerRequiredMixin
 
 
 class DashboardWebView(ManagerRequiredMixin, TemplateView):
@@ -33,22 +34,11 @@ class DashboardWebView(ManagerRequiredMixin, TemplateView):
 
         by_status = {s: qs.filter(status=s).count() for s in Visit.Status.values}
 
-        active = by_status['en_camino'] + by_status['llegada'] + by_status['trabajando']
+        active = by_status['en_camino'] + by_status['llegada'] + by_status['trabajando'] + by_status['finalizando']
         completion_rate   = round(by_status['completada'] / total * 100) if total else 0
         cancellation_rate = round(by_status['cancelada']  / total * 100) if total else 0
 
-        avg_duration = None
-        completed_qs = qs.filter(
-            status=Visit.Status.COMPLETADA,
-            hora_inicio_trabajos__isnull=False,
-            hora_fin_trabajos__isnull=False,
-        )
-        if completed_qs.exists():
-            total_secs = sum(
-                (v.hora_fin_trabajos - v.hora_inicio_trabajos).total_seconds()
-                for v in completed_qs
-            )
-            avg_duration = round(total_secs / completed_qs.count() / 60, 1)
+        avg_duration = _avg_work_duration_minutes(qs)
 
         today = timezone.localdate()
 
@@ -72,25 +62,34 @@ class DashboardWebView(ManagerRequiredMixin, TemplateView):
             )
             avg_approval_hours = round(total_approval_secs / approved_qs.count() / 3600, 1)
 
-        # Top 10 técnicos
+        completed_qs = qs.filter(status=Visit.Status.COMPLETADA)
+
+        # Todos los técnicos — con conteo de completadas y canceladas
+        techs_base = User.objects.filter(role=User.Role.TECHNICIAN)
+        if self.request.user.role == User.Role.MANAGER:
+            techs_base = techs_base.filter(company=self.request.user.company)
         top_techs = list(
-            qs.values('technician__email', 'technician__first_name', 'technician__last_name')
+            techs_base.annotate(
+                count=Count(Case(When(visits__status=Visit.Status.COMPLETADA, then=1), output_field=IntegerField())),
+                cancelled=Count(Case(When(visits__status=Visit.Status.CANCELADA, then=1), output_field=IntegerField())),
+            )
+            .filter(Q(count__gt=0) | Q(cancelled__gt=0))
+            .values('email', 'first_name', 'last_name', 'count', 'cancelled')
+            .order_by('-count', '-cancelled')
+        )
+        max_tech_count = max((t['count'] for t in top_techs), default=1) or 1
+
+        # Top 10 sitios (solo visitas completadas)
+        top_sites = list(
+            completed_qs.values('site__code', 'site__name', 'site__operator_code')
               .annotate(count=Count('id'))
               .order_by('-count')[:10]
         )
-        max_tech_count = top_techs[0]['count'] if top_techs else 1
-
-        # Top 5 sitios
-        top_sites = list(
-            qs.values('site__code', 'site__name', 'site__operator_code')
-              .annotate(count=Count('id'))
-              .order_by('-count')[:5]
-        )
         max_site_count = top_sites[0]['count'] if top_sites else 1
 
-        # Distribución por día de semana (ExtractWeekDay: 1=Dom … 7=Sáb)
+        # Distribución por día de semana — solo completadas
         weekday_raw = (
-            qs.annotate(wd=ExtractWeekDay('scheduled_date'))
+            completed_qs.annotate(wd=ExtractWeekDay('scheduled_date'))
               .values('wd')
               .annotate(count=Count('id'))
         )
@@ -100,11 +99,11 @@ class DashboardWebView(ManagerRequiredMixin, TemplateView):
 
         trend_ranges = {}
 
-        # 7 y 30 días — agrupado por día
+        # 7 y 30 días — agrupado por día, solo completadas
         for days in (7, 30):
             first_day = today - timedelta(days=days - 1)
             raw = (
-                qs.filter(scheduled_date__gte=first_day, scheduled_date__lte=today)
+                completed_qs.filter(scheduled_date__gte=first_day, scheduled_date__lte=today)
                   .values('scheduled_date')
                   .annotate(count=Count('id'))
             )
@@ -116,22 +115,22 @@ class DashboardWebView(ManagerRequiredMixin, TemplateView):
                 data.append(day_map.get(d, 0))
             trend_ranges[str(days)] = {'labels': labels, 'data': data}
 
-        # 90 días — agrupado por semana (13 semanas)
-        weeks = 13
-        first_day_90 = today - timedelta(days=weeks * 7 - 1)
-        raw_90 = (
-            qs.filter(scheduled_date__gte=first_day_90, scheduled_date__lte=today)
-              .values('scheduled_date')
-              .annotate(count=Count('id'))
-        )
-        day_map_90 = {row['scheduled_date']: row['count'] for row in raw_90}
-        labels_90, data_90 = [], []
-        for w in range(weeks - 1, -1, -1):
-            week_start = today - timedelta(days=w * 7 + 6)
-            count = sum(day_map_90.get(week_start + timedelta(days=d), 0) for d in range(7))
-            labels_90.append(week_start.strftime('%d/%m'))
-            data_90.append(count)
-        trend_ranges['90'] = {'labels': labels_90, 'data': data_90}
+        # 90 y 180 días — agrupado por semana, solo completadas
+        for weeks, key in ((13, '90'), (26, '180')):
+            first_day_w = today - timedelta(days=weeks * 7 - 1)
+            raw_w = (
+                completed_qs.filter(scheduled_date__gte=first_day_w, scheduled_date__lte=today)
+                  .values('scheduled_date')
+                  .annotate(count=Count('id'))
+            )
+            day_map_w = {row['scheduled_date']: row['count'] for row in raw_w}
+            labels_w, data_w = [], []
+            for w in range(weeks - 1, -1, -1):
+                week_start = today - timedelta(days=w * 7 + 6)
+                count = sum(day_map_w.get(week_start + timedelta(days=d), 0) for d in range(7))
+                labels_w.append(week_start.strftime('%d/%m'))
+                data_w.append(count)
+            trend_ranges[key] = {'labels': labels_w, 'data': data_w}
 
         # Compatibilidad: exponer el rango por defecto (7d) para el chart inicial
         trend_labels = trend_ranges['7']['labels']
