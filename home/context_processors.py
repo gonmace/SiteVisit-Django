@@ -5,13 +5,24 @@ from django.conf import settings
 
 
 def theme(request):
-    """Inject active theme colors into every template context."""
+    """Inject active theme colors and app download URL into every template context."""
     company = 'default'
     if request.user.is_authenticated and hasattr(request.user, 'company'):
         company = request.user.company or 'default'
 
     palette = _load_palette(company)
-    return {'theme': palette}
+    return {'theme': palette, 'apk_download_url': _get_apk_url()}
+
+
+def _get_apk_url() -> str:
+    try:
+        from home.models import AppRelease
+        release = AppRelease.objects.only('apk').first()
+        if release and release.apk:
+            return release.apk.url
+    except Exception:
+        pass
+    return ''
 
 
 def _load_palette(company: str) -> dict:

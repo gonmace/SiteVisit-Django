@@ -134,20 +134,28 @@
 <!-- Desktop table -->
 <div class="hidden md:block bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
   <div class="overflow-x-auto">
-    <table class="table table-sm">
+    <table class="table table-sm table-fixed w-full">
       <thead>{% include thead_tpl %}</thead>
       <tbody id="visits-rows">{% include rows_tpl %}</tbody>
     </table>
   </div>
 </div>
 
-<!-- Botón Ver más -->
-<div class="flex justify-center mt-6">
-  <button id="load-more-btn" type="button"
-          data-next-offset="{{ next_offset }}"
-          class="btn btn-ghost btn-sm border border-base-300 text-secondary/60 h-9 min-h-0 {% if not has_more %}hidden{% endif %}">
-    Ver más
-  </button>
+<!-- Contador + Botón Ver más -->
+<div class="grid grid-cols-3 items-center mt-6">
+  <p class="text-xs font-medium text-base-content/60">
+    Mostrando <span id="count-shown" class="font-semibold text-base-content">{{ next_offset }}</span> de <span id="count-total" class="font-semibold text-base-content">{{ tab_total }}</span>
+  </p>
+  <div class="flex justify-center">
+    <button id="load-more-btn" type="button"
+            data-next-offset="{{ next_offset }}"
+            class="btn btn-outline btn-info btn-sm px-6 {% if not has_more %}hidden{% endif %}">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+      Ver más
+    </button>
+  </div>
 </div>
 
 {% else %}
@@ -180,8 +188,20 @@
 </div>
 {% endif %}
 
+<!-- Modal editar servicio (tab planificados) -->
+<dialog id="visit-edit-modal" class="modal">
+  <div class="modal-box max-w-lg p-0 overflow-hidden">
+    <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200">
+      <h3 id="visit-edit-modal-title" class="text-base font-bold text-base-content">Editar Servicio</h3>
+      <button onclick="document.getElementById('visit-edit-modal').close()" class="btn btn-ghost btn-xs btn-circle">✕</button>
+    </div>
+    <div id="visit-edit-modal-body" class="p-6 overflow-y-auto max-h-[80vh]"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <!-- Cancel modals (primer batch, solo coordinador en tab planificados) -->
-{% if tab == 'planificados' and request.user.role != 'super_manager' %}
+{% if tab == 'planificados' %}
 {% for visit in visits %}
 <dialog id="cancel-visit-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
   <div class="modal-box shadow-xl">
@@ -191,13 +211,14 @@
       en <strong class="text-base-content">{{ visit.site.code }}</strong>
       — {{ visit.scheduled_date|date:"d/m/Y" }}.
     </p>
-    <form method="post" action="{% url 'manager:visit_cancel' pk=visit.pk %}">
+    <form method="post" action="{% url 'manager:visit_cancel' pk=visit.pk %}"
+          onsubmit="var b=this.querySelector('[type=submit]');b.disabled=true;b.innerHTML='<span class=\'loading loading-spinner loading-xs\'></span>'">
       {% csrf_token %}
       <div class="mb-4">
         <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
           Motivo de cancelación *
         </label>
-        <textarea name="cancellation_reason" required minlength="3" rows="3"
+        <textarea name="cancellation_reason" required minlength="12" rows="3"
                   placeholder="Indica el motivo por el que se cancela este servicio…"
                   class="textarea textarea-bordered w-full text-sm resize-none"></textarea>
       </div>
@@ -247,7 +268,7 @@
 {% endif %}
 
 <!-- Delete modals (primer batch, super_manager, tab cancelados) -->
-{% if tab == 'cancelados' and request.user.role == 'super_manager' %}
+{% if tab == 'cancelados' and request.user.role == 'super_manager' or tab == 'cancelados' and request.user.is_superuser %}
 {% for visit in visits %}
 <dialog id="delete-visit-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
   <div class="modal-box shadow-xl">
@@ -283,9 +304,16 @@
   var currentTab    = '{{ tab }}';
   var currentQ      = '{{ site_q|escapejs }}';
 
-  var btn   = document.getElementById('load-more-btn');
-  var cards = document.getElementById('visits-cards');
-  var rows  = document.getElementById('visits-rows');
+  var btn        = document.getElementById('load-more-btn');
+  var cards      = document.getElementById('visits-cards');
+  var rows       = document.getElementById('visits-rows');
+  var countShown = document.getElementById('count-shown');
+  var countTotal = document.getElementById('count-total');
+
+  function updateCounter(shown, total) {
+    if (countShown) countShown.textContent = shown;
+    if (countTotal && total !== undefined) countTotal.textContent = total;
+  }
 
   var isDesktop = window.matchMedia('(min-width: 768px)').matches;
 
@@ -322,14 +350,16 @@
         btn.dataset.nextOffset = d.next_offset;
         btn.classList.toggle('hidden', !d.has_more);
       }
+      updateCounter(d.next_offset, d.tab_total);
     });
   }
 
   // Si el server sirvió mobile-limit y el viewport real es desktop, completar silenciosamente
-  if (btn && isDesktop && initialLimit === MOBILE_LIMIT) {
+  if (btn && isDesktop && initialLimit < DESKTOP_LIMIT) {
     var nextOffset = parseInt(btn.dataset.nextOffset, 10);
-    if (!isNaN(nextOffset)) {
-      fetchMore(nextOffset, DESKTOP_LIMIT - MOBILE_LIMIT, false);
+    var extra = DESKTOP_LIMIT - initialLimit;
+    if (!isNaN(nextOffset) && extra > 0) {
+      fetchMore(nextOffset, extra, false);
     }
   }
 
@@ -339,8 +369,10 @@
       var offset = parseInt(btn.dataset.nextOffset, 10);
       if (isNaN(offset)) return;
       btn.disabled = true;
+      btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Cargando…';
       fetchMore(offset, currentLimit(), false).finally(function () {
         btn.disabled = false;
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg> Ver más';
       });
     });
   }
@@ -365,6 +397,7 @@
             btn.classList.toggle('hidden', !d.has_more);
             btn.disabled = false;
           }
+          updateCounter(d.next_offset, d.tab_total);
           // Actualizar URL sin recargar
           var urlParams = new URLSearchParams();
           urlParams.set('tab', currentTab);
@@ -396,11 +429,45 @@
             btn.classList.toggle('hidden', !d.has_more);
             btn.disabled = false;
           }
+          updateCounter(d.next_offset, d.tab_total);
         });
       });
     }
   });
 })();
+
+function openVisitEditModal(url) {
+  var modal = document.getElementById('visit-edit-modal');
+  var body  = document.getElementById('visit-edit-modal-body');
+
+  body.innerHTML = '<div class="flex justify-center py-8"><span class="loading loading-spinner loading-md text-primary"></span></div>';
+  modal.showModal();
+
+  function loadForm(html) {
+    body.innerHTML = '';
+    body.appendChild(document.createRange().createContextualFragment(html));
+    var form = body.querySelector('form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var submitBtn = form.querySelector('[type=submit]');
+      if (submitBtn) _btnSpin(submitBtn);
+      fetch(url, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: new FormData(form)
+      }).then(function (r) {
+        if (r.ok) { modal.close(); window.location.reload(); }
+        else r.text().then(loadForm);
+      }).catch(function () { if (submitBtn) _btnRestore(submitBtn); Alert.error('Error al guardar los cambios.'); });
+    });
+  }
+
+  fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function (r) { return r.text(); })
+    .then(loadForm)
+    .catch(function () { body.innerHTML = '<p class="text-sm text-error p-4">Error al cargar el formulario.</p>'; });
+}
 
 function confirmVisitAction(btn, action, techName, siteCode, modalId) {
   var isApprove = action === 'aprobar';
@@ -427,9 +494,10 @@ function confirmVisitAction(btn, action, techName, siteCode, modalId) {
     setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
   }
   el.querySelector('.js-cancel').onclick = dismiss;
-  el.querySelector('.js-confirm').onclick = function () {
-    dismiss();
+  el.querySelector('.js-confirm').onclick = function (e) {
+    _btnSpin(e.currentTarget);
     if (modalId) {
+      dismiss();
       document.getElementById(modalId).showModal();
     } else {
       btn.closest('form').submit();

@@ -3,44 +3,33 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
-from core.mixins import ManagerRequiredMixin
+from core.mixins import (
+    PortalAccessRequiredMixin, SuperManagerRequiredMixin, CompanyScopedQuerysetMixin,
+)
 from sites.forms import SiteForm
 from sites.models import Site
 from users.models import User
 
 
-class SuperManagerRequiredMixin(LoginRequiredMixin):
-    login_url = '/manager/login/'
-
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return self.handle_no_permission()
-        if request.user.role != User.Role.SUPER_MANAGER:
-            return redirect('manager:sites_list')
-        return super().dispatch(request, *args, **kwargs)
-
-
-class SitesListView(ManagerRequiredMixin, ListView):
+class SitesListView(PortalAccessRequiredMixin, CompanyScopedQuerysetMixin, ListView):
     template_name = 'manager/sites_list.html'
     context_object_name = 'sites'
     paginate_by = 50
 
     def get_queryset(self):
-        qs = Site.objects.annotate(
+        qs = Site.objects.filter(is_active=True).annotate(
             sin_empresa=Case(
                 When(company='', then=Value(1)),
                 default=Value(0),
                 output_field=IntegerField(),
             )
         ).order_by('sin_empresa', 'code')
-        if self.request.user.role == User.Role.MANAGER:
-            qs = qs.filter(company=self.request.user.company)
+        qs = self.apply_company_filter(qs, 'company')
         q = self.request.GET.get('q', '').strip()
         if q:
             qs = qs.filter(Q(code__icontains=q) | Q(operator_code__icontains=q) | Q(name__icontains=q))
@@ -49,7 +38,13 @@ class SitesListView(ManagerRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['q'] = self.request.GET.get('q', '')
-        ctx['is_super_manager'] = self.request.user.role == User.Role.SUPER_MANAGER
+        ctx.update(self.company_context())
+        ctx['is_super_manager'] = (
+            self.request.user.role == User.Role.SUPER_MANAGER or self.request.user.is_superuser
+        )
+        if ctx['is_super_manager']:
+            for site in ctx['sites']:
+                site.edit_form = SiteForm(instance=site)
         return ctx
 
     def render_to_response(self, context, **response_kwargs):
@@ -57,24 +52,10 @@ class SitesListView(ManagerRequiredMixin, ListView):
             return render(self.request, 'manager/partials/sites_results.html', context)
         return super().render_to_response(context, **response_kwargs)
 
-    def get(self, request, *args, **kwargs):
-        response = super().get(request, *args, **kwargs)
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            html = render_to_string(
-                'manager/partials/sites_results.html',
-                response.context_data,
-                request=request,
-            )
-            return HttpResponse(html)
-        return response
 
-
-class SiteDetailView(ManagerRequiredMixin, View):
+class SiteDetailView(PortalAccessRequiredMixin, View):
     def get_queryset(self):
-        qs = Site.objects.all()
-        if self.request.user.role == User.Role.MANAGER:
-            qs = qs.filter(company=self.request.user.company)
-        return qs
+        return Site.objects.all()
 
     def get(self, request, pk, **kwargs):
         site = get_object_or_404(self.get_queryset(), pk=pk)
@@ -135,22 +116,21 @@ class SiteDeleteView(SuperManagerRequiredMixin, DeleteView):
 
     def form_valid(self, form):
         code = self.object.code
-        self.object.delete()
+        self.object.is_active = False
+        self.object.save(update_fields=['is_active'])
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': f'Sitio {code} eliminado.'})
         messages.success(self.request, f'Sitio {code} eliminado.')
         return redirect(self.success_url)
 
 
-class SiteSearchJsonView(ManagerRequiredMixin, View):
+class SiteSearchJsonView(PortalAccessRequiredMixin, CompanyScopedQuerysetMixin, View):
     """Returns JSON list of sites matching ?q= for autocomplete in visit form."""
     def get(self, request):
         q = request.GET.get('q', '').strip()
         if len(q) < 3:
             return JsonResponse([], safe=False)
-        qs = Site.objects.order_by('code')
-        if request.user.role == User.Role.MANAGER:
-            qs = qs.filter(company=request.user.company)
+        qs = self.apply_company_filter(Site.objects.order_by('code'), 'company')
         qs = qs.filter(Q(code__icontains=q) | Q(operator_code__icontains=q) | Q(name__icontains=q))
         data = [{'id': s.pk, 'code': s.code, 'operator_code': s.operator_code, 'name': s.name,
                  'lat': s.latitude, 'lng': s.longitude} for s in qs[:20]]
@@ -160,8 +140,21 @@ class SiteSearchJsonView(ManagerRequiredMixin, View):
 class SiteImportView(SuperManagerRequiredMixin, View):
     template_name = 'manager/site_import.html'
 
+    _col_spec = [
+        ('A', 'Código Sitio',    True),
+        ('B', 'Cód. Operador',   False),
+        ('C', 'Nombre Sitio',    True),
+        ('D', 'Latitud',         True),
+        ('E', 'Longitud',        True),
+        ('F', 'Altura (m)',      False),
+        ('G', 'Comuna',          False),
+        ('H', 'Región',          False),
+        ('I', 'Empresa (wom/pti)', True),
+        ('J', 'Activo (Sí/No)',  False),
+    ]
+
     def get(self, request):
-        return render(request, self.template_name)
+        return render(request, self.template_name, {'col_spec': self._col_spec})
 
     def post(self, request):
         file = request.FILES.get('file')
@@ -176,22 +169,31 @@ class SiteImportView(SuperManagerRequiredMixin, View):
 
             created = updated = 0
             errors = []
+            seen_codes = set()
 
             for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
                 if not any(row):
                     continue
                 try:
+                    # Columnas: Código | Cód.Op. | Nombre | Lat | Lon | Altura | Comuna | Región | Empresa | Activo
                     code      = str(row[0]).strip() if row[0] else ''
                     op_code   = str(row[1]).strip() if len(row) > 1 and row[1] else ''
                     name      = str(row[2]).strip() if len(row) > 2 and row[2] else ''
                     latitude  = float(row[3]) if len(row) > 3 and row[3] is not None else None
                     longitude = float(row[4]) if len(row) > 4 and row[4] is not None else None
                     height    = int(row[5]) if len(row) > 5 and row[5] is not None else None
-                    company   = str(row[6]).strip().lower() if len(row) > 6 and row[6] else ''
+                    comuna    = str(row[6]).strip() if len(row) > 6 and row[6] else ''
+                    region    = str(row[7]).strip() if len(row) > 7 and row[7] else ''
+                    company   = str(row[8]).strip().lower() if len(row) > 8 and row[8] else ''
 
                     if not code or not name or latitude is None or longitude is None:
                         errors.append(f'Fila {i}: código, nombre, latitud y longitud son requeridos.')
                         continue
+
+                    if code in seen_codes:
+                        errors.append(f'Fila {i}: código "{code}" duplicado en el archivo, se omite.')
+                        continue
+                    seen_codes.add(code)
 
                     existing = Site.objects.filter(code=code).first()
                     if not existing and not company:
@@ -207,6 +209,8 @@ class SiteImportView(SuperManagerRequiredMixin, View):
                         'latitude': latitude,
                         'longitude': longitude,
                         'height': height,
+                        'comuna': comuna,
+                        'region': region,
                     }
                     if company:
                         defaults['company'] = company
@@ -230,3 +234,91 @@ class SiteImportView(SuperManagerRequiredMixin, View):
             messages.error(request, f'Error al leer el archivo: {e}')
 
         return redirect('manager:sites_list')
+
+
+class SiteTemplateView(SuperManagerRequiredMixin, View):
+    def get(self, request):
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+        from io import BytesIO
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Sitios'
+
+        headers = ['Código', 'Cód. Operador', 'Nombre', 'Latitud', 'Longitud', 'Altura (m)', 'Comuna', 'Región', 'Empresa', 'Activo']
+        header_fill = PatternFill('solid', fgColor='4A4D4E')
+        header_font = Font(bold=True, color='FFFFFF')
+
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+
+        col_widths = [16, 16, 40, 14, 14, 14, 20, 28, 10, 8]
+        for i, w in enumerate(col_widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        response = HttpResponse(
+            buf.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = 'attachment; filename="plantilla_sitios.xlsx"'
+        return response
+
+
+class SiteExportView(SuperManagerRequiredMixin, View):
+    def get(self, request):
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.utils import get_column_letter
+
+        qs = Site.objects.order_by('company', 'code')
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Sitios'
+
+        headers = ['Código', 'Cód. Operador', 'Nombre', 'Latitud', 'Longitud', 'Altura (m)', 'Comuna', 'Región', 'Empresa', 'Activo']
+        header_fill = PatternFill('solid', fgColor='4A4D4E')
+        header_font = Font(bold=True, color='FFFFFF')
+
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+
+        for row_idx, site in enumerate(qs, 2):
+            ws.cell(row=row_idx, column=1, value=site.code)
+            ws.cell(row=row_idx, column=2, value=site.operator_code or '')
+            ws.cell(row=row_idx, column=3, value=site.name)
+            ws.cell(row=row_idx, column=4, value=float(site.latitude) if site.latitude is not None else None)
+            ws.cell(row=row_idx, column=5, value=float(site.longitude) if site.longitude is not None else None)
+            ws.cell(row=row_idx, column=6, value=site.height)
+            ws.cell(row=row_idx, column=7, value=site.comuna or '')
+            ws.cell(row=row_idx, column=8, value=site.region or '')
+            ws.cell(row=row_idx, column=9, value=site.company)
+            ws.cell(row=row_idx, column=10, value='Sí' if site.is_active else 'No')
+
+        col_widths = [16, 16, 40, 14, 14, 14, 20, 28, 10, 8]
+        for i, w in enumerate(col_widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+
+        from io import BytesIO
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+
+        response = HttpResponse(
+            buf.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = 'attachment; filename="sitios.xlsx"'
+        return response

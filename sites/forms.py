@@ -8,7 +8,7 @@ _sel = 'select select-bordered select-sm w-full'
 class SiteForm(forms.ModelForm):
     class Meta:
         model = Site
-        fields = ['code', 'operator_code', 'name', 'latitude', 'longitude', 'height', 'company', 'is_active']
+        fields = ['code', 'operator_code', 'name', 'latitude', 'longitude', 'height', 'comuna', 'region', 'company', 'is_active']
         widgets = {
             'code':          forms.TextInput(attrs={'class': _inp}),
             'operator_code': forms.TextInput(attrs={'class': _inp}),
@@ -16,6 +16,8 @@ class SiteForm(forms.ModelForm):
             'latitude':      forms.NumberInput(attrs={'class': _inp, 'step': 'any'}),
             'longitude':     forms.NumberInput(attrs={'class': _inp, 'step': 'any'}),
             'height':        forms.NumberInput(attrs={'class': _inp}),
+            'comuna':        forms.TextInput(attrs={'class': _inp}),
+            'region':        forms.TextInput(attrs={'class': _inp}),
             'company':       forms.Select(attrs={'class': _sel}),
             'is_active':     forms.CheckboxInput(attrs={'class': 'checkbox checkbox-sm checkbox-primary'}),
         }
@@ -26,6 +28,8 @@ class SiteForm(forms.ModelForm):
             'latitude':      'Latitud',
             'longitude':     'Longitud',
             'height':        'Altura (m)',
+            'comuna':        'Comuna',
+            'region':        'Región',
             'company':       'Empresa',
             'is_active':     'Activo',
         }

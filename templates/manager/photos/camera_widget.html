@@ -1,0 +1,276 @@
+{% comment %}
+photos/camera_widget.html
+Widget de carga y gestión de fotos con drag-and-drop.
+Uso: {% include 'manager/photos/camera_widget.html' with upload_url=... foto_min=0 foto_count=0 %}
+{% endcomment %}
+{% with wid=upload_url|default:"preview"|slugify %}
+<div class="camera-widget bg-base-100 rounded-2xl border border-base-300 shadow-xs p-4"
+     data-upload-url="{{ upload_url }}"
+     data-foto-min="{{ foto_min|default:0 }}"
+     data-foto-count="{{ foto_count|default:0 }}"
+     data-superuser="{% if request.user.role == 'super_manager' or request.user.is_superuser %}true{% else %}false{% endif %}">
+
+  <div class="flex items-center justify-between mb-3 gap-3">
+    <label for="cam-{{ wid }}"
+           class="btn btn-success btn-sm flex-1 cursor-pointer">
+      <i class="fa-solid fa-images"></i> Seleccionar imágenes
+    </label>
+    <input type="file" id="cam-{{ wid }}" class="sr-only camera-file-input" accept="image/*" multiple>
+    <p class="text-sm text-base-content/50 whitespace-nowrap shrink-0">
+      <span class="camera-count font-semibold text-base-content">{{ foto_count|default:0 }}</span>
+      {% if foto_min %}<span class="text-xs">/ mín. {{ foto_min }}</span>{% endif %} foto(s)
+    </p>
+  </div>
+
+  <label for="cam-{{ wid }}"
+         class="camera-drop-zone hidden md:flex flex-col items-center justify-center
+                border-2 border-dashed border-base-content/20 rounded-xl p-6 mb-3
+                bg-base-200/60 cursor-pointer transition-colors duration-150 hover:border-primary/40">
+    <i class="fas fa-cloud-upload-alt text-3xl text-base-content/25 mb-2"></i>
+    <p class="text-sm text-base-content/40 mb-1">Arrastra imágenes aquí</p>
+    <p class="text-xs text-base-content/30">o toca para seleccionar</p>
+  </label>
+
+  <div class="camera-uploading hidden items-center gap-2 mb-2 text-sm text-base-content/50">
+    <span class="loading loading-spinner loading-xs"></span> Subiendo…
+  </div>
+
+  <div class="camera-preview grid grid-cols-3 sm:grid-cols-4 gap-2 mt-1"></div>
+</div>
+{% endwith %}
+
+<script>
+(function () {
+  'use strict';
+
+  var _lightbox = null;
+  function getLightbox() {
+    if (_lightbox) return _lightbox;
+    var overlay = document.createElement('div');
+    overlay.className = 'hidden fixed inset-0 bg-black/85 z-[9999] cursor-zoom-out items-center justify-center';
+    var img = document.createElement('img');
+    img.className = 'max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl object-contain';
+    overlay.appendChild(img);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function () {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('flex');
+      img.src = '';
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('flex');
+        img.src = '';
+      }
+    });
+    _lightbox = { open: function (src) { img.src = src; overlay.classList.remove('hidden'); overlay.classList.add('flex'); } };
+    return _lightbox;
+  }
+
+  function initWidget(widget) {
+    widget.dataset.initialized = 'true';
+
+    var uploadUrl     = widget.dataset.uploadUrl;
+    var listUrl       = uploadUrl ? uploadUrl.replace('/upload/', '/') : '';
+    var updateUrl     = uploadUrl ? uploadUrl.replace('/upload/', '/update/') : '';
+    var deleteBaseUrl = uploadUrl ? uploadUrl.replace('/upload/', '/delete/') : '';
+    var isSuperuser   = widget.dataset.superuser === 'true';
+
+    var countEl   = widget.querySelector('.camera-count');
+    var previewEl = widget.querySelector('.camera-preview');
+    var count     = parseInt(widget.dataset.fotoCount || '0', 10);
+
+    function getCsrf() {
+      var el = document.querySelector('[name=csrfmiddlewaretoken]');
+      return el ? el.value : '';
+    }
+
+    function buildCard(imgSrc, photoId) {
+      var card = document.createElement('div');
+      card.className = 'flex flex-col gap-1';
+      if (photoId) card.dataset.photoId = photoId;
+
+      var imgWrap = document.createElement('div');
+      imgWrap.className = 'relative';
+
+      var img = document.createElement('img');
+      img.src = imgSrc;
+      img.className = 'w-full h-auto rounded-lg shadow-sm cursor-zoom-in';
+      img.addEventListener('click', function () { getLightbox().open(img.src); });
+
+      if (isSuperuser) {
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-error btn-circle btn-xs absolute top-1 right-1 shadow';
+        delBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        delBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var pid = card.dataset.photoId;
+          if (pid && deleteBaseUrl) {
+            deletePhoto(pid, card);
+          } else {
+            card.remove(); count--; countEl.textContent = count;
+          }
+        });
+        imgWrap.appendChild(delBtn);
+      }
+
+      imgWrap.appendChild(img);
+      card.appendChild(imgWrap);
+
+      var descInput = document.createElement('input');
+      descInput.type = 'text';
+      descInput.className = 'input input-xs w-full hidden';
+      descInput.placeholder = 'Descripción…';
+      descInput.addEventListener('blur', function () {
+        if (card.dataset.photoId) saveDescription(card.dataset.photoId, descInput.value);
+      });
+      card.appendChild(descInput);
+
+      var exifEl = document.createElement('p');
+      exifEl.className = 'text-[10px] text-base-content/40 hidden px-0.5 font-mono';
+      card.appendChild(exifEl);
+
+      previewEl.appendChild(card);
+      count++; countEl.textContent = count;
+      return { card: card, img: img, imgWrap: imgWrap, descInput: descInput, exifEl: exifEl };
+    }
+
+    function finalizeCard(parts, photo) {
+      parts.card.dataset.photoId = photo.id;
+      parts.img.src = photo.url;
+      parts.descInput.value = photo.descripcion || '';
+      parts.descInput.classList.remove('hidden');
+      var spinner = parts.imgWrap.querySelector('.camera-spinner');
+      if (spinner) spinner.remove();
+      var exifParts = [];
+      if (photo.exif_datetime) exifParts.push(photo.exif_datetime);
+      if (photo.exif_lat != null && photo.exif_lon != null) {
+        exifParts.push(Number(photo.exif_lat).toFixed(6) + ', ' + Number(photo.exif_lon).toFixed(6));
+      }
+      if (exifParts.length) {
+        parts.exifEl.textContent = exifParts.join(' · ');
+        parts.exifEl.classList.remove('hidden');
+      }
+    }
+
+    function addPhotoCard(photo) {
+      finalizeCard(buildCard(photo.thumbnail_url || photo.url, photo.id), photo);
+    }
+
+    function saveDescription(photoId, desc) {
+      if (!updateUrl) return;
+      fetch(updateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+        body: JSON.stringify({ photo_id: photoId, descripcion: desc }),
+      }).catch(function () {});
+    }
+
+    function deletePhoto(photoId, cardEl) {
+      fetch(deleteBaseUrl + photoId + '/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.success) {
+          cardEl.remove(); count--; countEl.textContent = count;
+          if (window.Alert) Alert.success('Foto eliminada', { autoHide: 2000 });
+        } else {
+          if (window.Alert) Alert.error(res.message || 'Error al eliminar');
+        }
+      })
+      .catch(function () {
+        if (window.Alert) Alert.error('Error de conexión');
+      });
+    }
+
+    function upload(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      var localUrl = URL.createObjectURL(file);
+      var parts    = buildCard(localUrl, null);
+
+      var spinner = document.createElement('div');
+      spinner.className = 'camera-spinner absolute inset-0 flex items-center justify-center bg-base-300/40 rounded-lg';
+      spinner.innerHTML = '<span class="loading loading-spinner loading-sm"></span>';
+      parts.imgWrap.appendChild(spinner);
+
+      if (!uploadUrl) { spinner.remove(); return; }
+
+      var formData = new FormData();
+      formData.append('photos', file);
+
+      var uploadingEl = widget.querySelector('.camera-uploading');
+      if (uploadingEl) uploadingEl.classList.remove('hidden');
+      uploadingEl.classList.add('flex');
+
+      fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+        body: formData,
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.success && res.photos && res.photos.length) {
+          URL.revokeObjectURL(localUrl);
+          finalizeCard(parts, res.photos[0]);
+          if (window.Alert) Alert.success('Foto subida', { autoHide: 2000 });
+        } else {
+          parts.card.remove(); count--; countEl.textContent = count;
+          URL.revokeObjectURL(localUrl);
+          if (window.Alert) Alert.error(res.message || 'Error al subir');
+        }
+      })
+      .catch(function () {
+        parts.card.remove(); count--; countEl.textContent = count;
+        URL.revokeObjectURL(localUrl);
+        if (window.Alert) Alert.error('Error de conexión');
+      })
+      .finally(function () {
+        if (uploadingEl) { uploadingEl.classList.add('hidden'); uploadingEl.classList.remove('flex'); }
+      });
+    }
+
+    widget.querySelector('.camera-file-input').addEventListener('change', function () {
+      var files = Array.from(this.files);
+      this.value = '';
+      files.forEach(upload);
+    });
+
+    var dropZone = widget.querySelector('.camera-drop-zone');
+    if (dropZone) {
+      dropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropZone.classList.add('border-primary/60', 'bg-base-300/40');
+        dropZone.classList.remove('border-base-content/20', 'bg-base-200/60');
+      });
+      ['dragleave', 'drop'].forEach(function (ev) {
+        dropZone.addEventListener(ev, function (e) {
+          dropZone.classList.remove('border-primary/60', 'bg-base-300/40');
+          dropZone.classList.add('border-base-content/20', 'bg-base-200/60');
+          if (ev === 'drop') {
+            e.preventDefault();
+            Array.from(e.dataTransfer.files).filter(function (f) { return f.type.startsWith('image/'); }).forEach(upload);
+          }
+        });
+      });
+    }
+
+    if (listUrl) {
+      fetch(listUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (res) {
+          if (res && res.photos) {
+            count = 0; countEl.textContent = 0; previewEl.innerHTML = '';
+            res.photos.forEach(addPhotoCard);
+          }
+        })
+        .catch(function () {});
+    }
+  }
+
+  document.querySelectorAll('.camera-widget:not([data-initialized])').forEach(initWidget);
+})();
+</script>

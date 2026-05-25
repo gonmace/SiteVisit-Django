@@ -1,0 +1,359 @@
+{% extends 'manager/base.html' %}
+{% load humanize %}
+
+{% block title %}Galería de Fotos{% endblock %}
+
+{% block content %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-xl font-bold text-base-content">Galería de Fotos</h1>
+      <p id="gallery-subtitle" class="text-sm text-base-content/50 mt-0.5">
+        {% if is_paginated %}
+          Mostrando {{ shown_count|intcomma }} de {{ total_count|intcomma }} foto(s)
+        {% else %}
+          {{ total_count|intcomma }} foto(s)
+        {% endif %}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="select-all-btn" type="button" class="btn btn-ghost btn-sm h-9 min-h-0 hidden">
+        <i class="fa-solid fa-check-double text-xs"></i> Seleccionar todo
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form id="gallery-form" method="get" class="bg-base-100 rounded-2xl border border-base-300 shadow-xs p-4 flex flex-wrap items-end gap-3">
+    {% if tech_filter %}<input type="hidden" name="tech" value="{{ tech_filter }}">{% endif %}
+    {% if tech_name %}
+    <div class="w-full flex items-center gap-2 -mb-1">
+      <span class="text-xs text-base-content/50">Técnico:</span>
+      <span class="badge badge-sm badge-info badge-outline gap-1">
+        <i class="fa-solid fa-user text-[9px]"></i>{{ tech_name }}
+      </span>
+      <a href="{% url 'manager:photos:gallery' %}{% if paso_filter or site_filter %}?paso={{ paso_filter }}&site={{ site_filter }}{% endif %}"
+         class="text-[10px] text-base-content/40 hover:text-error transition-colors">
+        <i class="fa-solid fa-xmark"></i> quitar filtro
+      </a>
+    </div>
+    {% endif %}
+    <div class="min-w-36">
+      <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-1">Paso</label>
+      <select name="paso" id="gallery-paso" class="select select-sm select-bordered w-full">
+        <option value="">Todos</option>
+        {% for val, label in pasos %}
+        <option value="{{ val }}" {% if paso_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="min-w-48 flex-1">
+      <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-1">Sitio</label>
+      <div class="relative">
+        <input type="text" name="site" id="gallery-site" value="{{ site_filter }}" placeholder="Técnico, código PTI, operador, nombre de sitio…"
+               autocomplete="off"
+               class="input input-sm input-bordered w-full pr-8">
+        <span id="gallery-site-spinner"
+              class="loading loading-spinner loading-xs text-primary absolute right-2 top-1/2 -translate-y-1/2 hidden"></span>
+      </div>
+    </div>
+    {% if paso_filter or site_filter or tech_filter %}
+    <a href="{% url 'manager:photos:gallery' %}" class="btn btn-ghost btn-sm h-9 min-h-0 border border-base-300">
+      Limpiar
+    </a>
+    {% endif %}
+  </form>
+
+  <!-- Resultados (grid + paginación) — reemplazado por AJAX -->
+  <div id="gallery-results">
+
+  <!-- Grid de fotos -->
+  {% if photos %}
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+    {% for photo in photos %}
+    <div class="photo-card group relative rounded-xl overflow-hidden border border-base-300 bg-base-100 shadow-xs flex flex-col transition-all" data-id="{{ photo.pk }}">
+      <!-- Checkbox -->
+      <label class="absolute top-1.5 right-1.5 z-10 cursor-pointer" onclick="event.stopPropagation()">
+        <input type="checkbox" class="photo-checkbox checkbox checkbox-xs checkbox-accent" value="{{ photo.pk }}">
+      </label>
+      <!-- Imagen -->
+      <div class="bg-base-200 cursor-zoom-in"
+           onclick="openLightbox('{{ photo.image.url }}', '{{ photo.get_photo_type_display|escapejs }} — {{ photo.visit.site.code|escapejs }}', '{{ photo.taken_at|date:"d-m-Y H:i"|escapejs }}')">
+        <img src="{{ photo.image.url }}"
+             alt="{{ photo.get_photo_type_display }}"
+             class="w-full h-auto object-cover"
+             loading="lazy">
+      </div>
+      <!-- Info -->
+      <div class="p-2 space-y-0.5 flex-1">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-accent font-mono text-[10px] font-semibold">{{ photo.visit.site.code }}</span>
+          <span class="badge badge-xs badge-ghost font-medium">{{ photo.get_photo_type_display }}</span>
+        </div>
+        <p class="text-[10px] text-base-content/40 font-mono">{{ photo.taken_at|date:"d-m-Y H:i" }}</p>
+        {% if photo.latitude and photo.longitude %}
+        <a href="https://www.google.com/maps/search/?api=1&query={{ photo.latitude|stringformat:'.6f' }},{{ photo.longitude|stringformat:'.6f' }}"
+           target="_blank"
+           class="text-[9px] text-info hover:underline font-mono block truncate">
+          {{ photo.latitude|stringformat:".6f" }}, {{ photo.longitude|stringformat:".6f" }}
+        </a>
+        {% endif %}
+        <a href="{% url 'manager:visit_detail' pk=photo.visit.pk %}"
+           class="text-[10px] text-base-content/40 hover:text-info transition-colors block truncate">
+          <i class="fa-solid fa-eye text-[8px]"></i>
+          {{ photo.visit.technician.get_full_name|default:photo.visit.technician.email }}
+        </a>
+        <p class="text-[10px] text-base-content/30 font-mono text-right">{{ photo.image.size|filesizeformat }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Paginación -->
+  {% if is_paginated %}
+  <div class="flex justify-center mt-4 gap-1">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}&paso={{ paso_filter }}&site={{ site_filter }}&tech={{ tech_filter }}"
+       class="btn btn-ghost btn-sm">‹ Anterior</a>
+    {% endif %}
+    <span class="btn btn-ghost btn-sm pointer-events-none">
+      {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+    </span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}&paso={{ paso_filter }}&site={{ site_filter }}&tech={{ tech_filter }}"
+       class="btn btn-ghost btn-sm">Siguiente ›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-24 gap-3 text-base-content/30">
+    <i class="fa-regular fa-images text-5xl"></i>
+    <p class="text-sm">No hay fotos con los filtros seleccionados</p>
+  </div>
+  {% endif %}
+
+  </div><!-- /#gallery-results -->
+</div>
+
+<!-- Barra flotante de selección -->
+<div id="bulk-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-neutral text-neutral-content rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 min-w-80">
+  <span id="bulk-count" class="text-sm font-semibold tabular-nums">0 seleccionadas</span>
+  <div class="flex-1"></div>
+  <button id="bulk-download-btn" type="button" class="btn btn-sm h-9 min-h-0 bg-success text-success-content border-0 hover:bg-success/80">
+    <i class="fa-solid fa-download text-xs"></i> Descargar
+  </button>
+  {% if request.user.role == 'super_manager' or request.user.is_superuser %}
+  <button id="bulk-delete-btn" type="button" class="btn btn-sm h-9 min-h-0 bg-error text-error-content border-0 hover:bg-error/80">
+    <i class="fa-solid fa-trash text-xs"></i>
+  </button>
+  {% endif %}
+  <button id="bulk-cancel-btn" type="button" class="btn btn-ghost btn-sm h-9 min-h-0">
+    <i class="fa-solid fa-xmark text-xs"></i>
+  </button>
+</div>
+
+<!-- Lightbox -->
+<dialog id="lightbox" class="modal">
+  <div class="modal-box max-w-4xl p-3 bg-black/90 border border-white/10">
+    <img id="lightbox-img" src="" alt="" class="w-full h-auto rounded-lg max-h-[80vh] object-contain">
+    <div class="text-center mt-2 space-y-0.5">
+      <p id="lightbox-caption" class="text-sm font-semibold text-white/90"></p>
+      <p id="lightbox-date" class="text-xs font-mono text-white/50"></p>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+</dialog>
+
+<script>
+function openLightbox(url, caption, date) {
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox-caption').textContent = caption || '';
+  document.getElementById('lightbox-date').textContent = date || '';
+  document.getElementById('lightbox').showModal();
+}
+
+(function () {
+  var siteInput    = document.getElementById('gallery-site');
+  var pasoSelect   = document.getElementById('gallery-paso');
+  var spinner      = document.getElementById('gallery-site-spinner');
+  var results      = document.getElementById('gallery-results');
+  var subtitleEl   = document.getElementById('gallery-subtitle');
+  var bulkBar      = document.getElementById('bulk-bar');
+  var bulkCountEl  = document.getElementById('bulk-count');
+  var selectAllBtn = document.getElementById('select-all-btn');
+  var downloadBtn  = document.getElementById('bulk-download-btn');
+  var deleteBtn    = document.getElementById('bulk-delete-btn');
+  var cancelBtn    = document.getElementById('bulk-cancel-btn');
+  var downloadUrl  = '{% url "manager:visit_photo_bulk_download" %}';
+  var deleteUrl    = '{% url "manager:visit_photo_bulk_delete" %}';
+  var debounce;
+  var selectedIds  = new Set();
+
+  function getCsrf() {
+    var el = document.querySelector('#confirm-post-form [name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
+
+  function updateBulkBar() {
+    var n = selectedIds.size;
+    if (n > 0) {
+      bulkBar.classList.remove('hidden');
+      bulkCountEl.textContent = n + (n === 1 ? ' seleccionada' : ' seleccionadas');
+      selectAllBtn.classList.remove('hidden');
+    } else {
+      bulkBar.classList.add('hidden');
+      selectAllBtn.classList.add('hidden');
+    }
+  }
+
+  function clearSelection() {
+    selectedIds.clear();
+    results.querySelectorAll('.photo-checkbox').forEach(function (cb) {
+      cb.checked = false;
+      cb.closest('.photo-card').classList.remove('ring-2', 'ring-accent');
+    });
+    updateBulkBar();
+  }
+
+  // Delegación: checkbox change
+  results.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('photo-checkbox')) return;
+    var id   = parseInt(e.target.value);
+    var card = e.target.closest('.photo-card');
+    if (e.target.checked) {
+      selectedIds.add(id);
+      card.classList.add('ring-2', 'ring-accent');
+    } else {
+      selectedIds.delete(id);
+      card.classList.remove('ring-2', 'ring-accent');
+    }
+    updateBulkBar();
+  });
+
+  // Seleccionar todo
+  selectAllBtn.addEventListener('click', function () {
+    results.querySelectorAll('.photo-checkbox').forEach(function (cb) {
+      cb.checked = true;
+      selectedIds.add(parseInt(cb.value));
+      cb.closest('.photo-card').classList.add('ring-2', 'ring-accent');
+    });
+    updateBulkBar();
+  });
+
+  // Cancelar selección
+  cancelBtn.addEventListener('click', clearSelection);
+
+  // Descargar
+  downloadBtn.addEventListener('click', function () {
+    if (!selectedIds.size) return;
+    var ids = [...selectedIds];
+    var btn = this;
+    var orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+    fetch(downloadUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify({ ids: ids }),
+    })
+    .then(function (r) {
+      if (!r.ok) throw new Error();
+      return r.blob();
+    })
+    .then(function (blob) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'fotos_' + new Date().toISOString().slice(0, 10) + '.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    })
+    .catch(function () { Alert.error('Error al descargar las fotos.'); })
+    .finally(function () { btn.disabled = false; btn.innerHTML = orig; });
+  });
+
+  // Eliminar (solo super_manager)
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', function () {
+      var n = selectedIds.size;
+      if (!n) return;
+      var ids = [...selectedIds];
+      confirmAction({
+        type: 'error',
+        title: 'Eliminar fotos',
+        message: 'Se eliminarán ' + n + ' foto' + (n > 1 ? 's' : '') + '. Esta acción no se puede deshacer.',
+        confirmText: 'Eliminar',
+        confirmClass: 'btn-error',
+        onConfirm: function () {
+          fetch(deleteUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+            body: JSON.stringify({ ids: ids }),
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d.success) {
+              ids.forEach(function (id) {
+                var card = results.querySelector('.photo-card[data-id="' + id + '"]');
+                if (card) card.remove();
+              });
+              clearSelection();
+              Alert.success(d.message);
+            } else {
+              Alert.error(d.message || 'Error al eliminar.');
+            }
+          })
+          .catch(function () { Alert.error('Error al eliminar.'); });
+        },
+      });
+    });
+  }
+
+  // Filtros AJAX
+  function buildParams(overrides) {
+    var p = new URLSearchParams(window.location.search);
+    p.delete('page');
+    Object.entries(overrides).forEach(function (e) {
+      if (e[1]) { p.set(e[0], e[1]); } else { p.delete(e[0]); }
+    });
+    return p;
+  }
+
+  function fetchResults(params) {
+    spinner.classList.remove('hidden');
+    clearSelection();
+    var url = window.location.pathname + '?' + params.toString();
+    fetch(url, { headers: { 'X-Requested-With': 'XHRGallery' } })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        var doc  = new DOMParser().parseFromString(html, 'text/html');
+        var next = doc.getElementById('gallery-results');
+        if (next) results.innerHTML = next.innerHTML;
+        var ns = doc.getElementById('gallery-subtitle');
+        if (ns && subtitleEl) subtitleEl.textContent = ns.textContent;
+        history.pushState({}, '', url);
+      })
+      .catch(function () {})
+      .finally(function () { spinner.classList.add('hidden'); });
+  }
+
+  siteInput.addEventListener('input', function () {
+    clearTimeout(debounce);
+    var val = this.value.trim();
+    if (val.length > 0 && val.length < 3) return;
+    debounce = setTimeout(function () {
+      fetchResults(buildParams({ site: val, paso: pasoSelect.value }));
+    }, 400);
+  });
+
+  pasoSelect.addEventListener('change', function () {
+    clearTimeout(debounce);
+    fetchResults(buildParams({ paso: this.value, site: siteInput.value.trim() }));
+  });
+})();
+</script>
+{% endblock %}

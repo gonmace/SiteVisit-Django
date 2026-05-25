@@ -48,15 +48,13 @@
 
   <div style="width:100%; max-width:340px; display:flex; flex-direction:column; gap:24px;">
 
-    <!-- Icon + title -->
-    <div style="text-align:center;">
-      <div style="width:72px; height:72px; border-radius:18px; background:#e60000;
-                  display:flex; align-items:center; justify-content:center;
-                  margin:0 auto 14px; box-shadow:0 4px 16px rgba(230,0,0,0.25);">
-        <span style="font-size:28px; font-weight:900; color:#fff; letter-spacing:-1px;">SV</span>
-      </div>
-      <p style="font-size:22px; font-weight:700; color:#1c1c1e; margin:0; letter-spacing:-0.4px;">SiteVisit</p>
-      <p style="font-size:13px; color:#8e8e93; margin:5px 0 0;">Portal Manager</p>
+    <!-- Logos -->
+    <div style="display:flex; align-items:center; justify-content:center; gap:20px;">
+      <img src="{% static 'img/phoenix_tower_logo_horizontal.svg' %}" alt="Phoenix Tower"
+           style="height:36px; width:auto; object-fit:contain;">
+      <div style="width:1px; height:32px; background:rgba(0,0,0,0.1);"></div>
+      <img src="{% static 'img/tekon_logo.png' %}" alt="Tekon Redline"
+           style="height:36px; width:auto; object-fit:contain;">
     </div>
 
     <!-- Error -->
@@ -97,8 +95,30 @@
       </button>
     </form>
 
+    {% if apk_download_url %}
+    <!-- Descarga app técnicos -->
+    <div style="border-top:1px solid rgba(0,0,0,0.07); padding-top:20px; display:flex; flex-direction:column; align-items:center; gap:8px;">
+      <p style="font-size:11.5px; color:#8e8e93; text-align:center; line-height:1.4;">
+        ¿Eres técnico? Descarga la app para registrar tus visitas.
+      </p>
+      <a href="{{ apk_download_url }}" download
+         style="display:inline-flex; align-items:center; gap:8px; height:44px; padding:0 20px;
+                border-radius:12px; border:none;
+                font-size:14px; font-weight:600; font-family:inherit; color:#fff;
+                text-decoration:none; background:#3ddc84;
+                box-shadow:0 2px 8px rgba(61,220,132,0.35); transition:opacity 0.15s;"
+         onmousedown="this.style.opacity='0.82'" onmouseup="this.style.opacity='1'"
+         onmouseleave="this.style.opacity='1'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.523 15.341 14 11.819V4h-4v7.819l-3.523 3.522 1.415 1.415L12 12.594l4.108 4.162zM5 19h14v2H5z"/>
+        </svg>
+        Descargar app Android
+      </a>
+    </div>
+    {% endif %}
+
     <p style="text-align:center; font-size:12px; color:#c7c7cc;">
-      Phoenix International · SiteVisit
+      Phoenix Tower · Tekon Redline
     </p>
   </div>
 

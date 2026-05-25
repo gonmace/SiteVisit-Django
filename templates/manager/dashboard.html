@@ -14,39 +14,39 @@
 <!-- ── Fila 1: Total · Pendientes · Activos · Completadas · Canceladas · Rechazadas ── -->
 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
 
-  <div class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center">
+  <div class="bg-base-100 rounded-2xl border border-base-200 border-t-2 border-t-base-300 p-4 text-center">
     <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Total</p>
     <p class="text-3xl font-black text-base-content mt-1 leading-none">{{ total|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">visitas registradas</p>
   </div>
 
-  <a href="{{ url_visits }}?tab=planificados" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Pendientes</p>
-    <p class="text-3xl font-black {% if pendientes_count %}text-warning{% else %}text-base-content/25{% endif %} mt-1 leading-none">{{ pendientes_count|intcomma }}</p>
+  <a href="{{ url_visits }}?tab=planificados" class="bg-base-100 rounded-2xl border border-base-200 border-t-2 border-t-neutral p-4 text-center hover:shadow-sm transition-all block">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Planificados</p>
+    <p class="text-3xl font-black text-neutral mt-1 leading-none">{{ pendientes_count|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">por aprobar</p>
   </a>
 
-  <a href="{{ url_visits }}?tab=en_ejecucion" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Activos</p>
-    <p class="text-3xl font-black text-edit mt-1 leading-none">{{ active|intcomma }}</p>
+  <a href="{{ url_visits }}?tab=en_ejecucion" class="bg-base-100 rounded-2xl border border-base-200 border-t-2 border-t-warning p-4 text-center hover:shadow-sm transition-all block">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">En ejecución</p>
+    <p class="text-3xl font-black text-warning mt-1 leading-none">{{ active|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">en progreso ahora</p>
   </a>
 
-  <a href="{{ url_visits }}?tab=concluidos" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Completadas</p>
+  <a href="{{ url_visits }}?tab=concluidos" class="bg-base-100 rounded-2xl border border-base-200 border-t-2 border-t-success p-4 text-center hover:shadow-sm transition-all block">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Concluidos</p>
     <p class="text-3xl font-black text-success mt-1 leading-none">{{ by_status.completada|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">{{ completion_rate }}% del total</p>
   </a>
 
-  <a href="{{ url_visits }}?tab=cancelados" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Canceladas</p>
+  <a href="{{ url_visits }}?tab=cancelados" class="bg-base-100 rounded-2xl border border-base-200 border-t-2 border-t-error p-4 text-center hover:shadow-sm transition-all block">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Cancelados</p>
     <p class="text-3xl font-black text-error mt-1 leading-none">{{ by_status.cancelada|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">{{ cancellation_rate }}% del total</p>
   </a>
 
-  <a href="{{ url_visits }}?tab=cancelados" class="bg-base-100 rounded-2xl border border-base-200 p-4 text-center hover:border-base-content/20 hover:shadow-sm transition-all block">
-    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Rechazadas</p>
-    <p class="text-3xl font-black {% if rechazadas_count %}text-error{% else %}text-base-content/25{% endif %} mt-1 leading-none">{{ rechazadas_count|intcomma }}</p>
+  <a href="{{ url_visits }}?tab=cancelados" class="bg-base-100 rounded-2xl border border-base-200 border-t-2 border-t-error p-4 text-center hover:shadow-sm transition-all block">
+    <p class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Rechazados</p>
+    <p class="text-3xl font-black text-error mt-1 leading-none">{{ rechazadas_count|intcomma }}</p>
     <p class="text-xs text-base-content/40 mt-1.5">{{ rechazo_rate }}% del total</p>
   </a>
 
@@ -222,14 +222,14 @@
 <!-- ── Mapa de operaciones ── -->
 <div class="bg-base-100 rounded-2xl border border-base-200 overflow-hidden mb-5">
   <div class="px-5 py-3.5 border-b border-base-200 flex items-center justify-between flex-wrap gap-2">
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 flex-wrap">
       <div class="flex items-center gap-2">
         <div class="w-7 h-7 rounded-lg bg-info/10 flex items-center justify-center">
           <i class="fa-solid fa-map-location-dot text-[11px] text-info"></i>
         </div>
         <p class="text-sm font-bold text-base-content">Mapa de operaciones</p>
       </div>
-      <label class="flex items-center gap-2 cursor-pointer select-none" title="Mostrar todos los sitios del catálogo">
+      <label class="flex items-center gap-2 cursor-pointer select-none border-l border-base-200 pl-3" title="Mostrar todos los sitios del catálogo">
         <i class="fa-solid fa-tower-cell text-[10px] text-base-content/40"></i>
         <span class="text-xs font-medium text-base-content/50">Sitios</span>
         <input type="checkbox" id="sites-toggle-btn" class="toggle toggle-sm toggle-info" />
@@ -242,13 +242,6 @@
     </div>
     <!-- Filtros -->
     <form id="map-filter-form" class="flex flex-wrap items-center gap-2">
-      {% if is_super_manager %}
-      <select name="company" class="select select-bordered select-sm h-8 min-h-0 text-xs w-28">
-        <option value="all">Todas las empresas</option>
-        <option value="wom">WOM</option>
-        <option value="pti">PTI</option>
-      </select>
-      {% endif %}
       <select name="status" class="select select-bordered select-sm h-8 min-h-0 text-xs w-36">
         <option value="">Todos los estados</option>
         <option value="pendiente_aprobacion">Planificados</option>
@@ -291,6 +284,14 @@
   <!-- Contenedor del mapa -->
   <div class="relative">
     <div id="operations-map" style="height:460px;"></div>
+    <!-- Leyenda flotante -->
+    <div class="absolute bottom-6 left-3 z-[999] bg-base-100/90 backdrop-blur-sm border border-base-200 rounded-xl shadow-md px-3 py-2.5 flex flex-col gap-1.5 pointer-events-none">
+      <span class="flex items-center gap-1.5 text-[10px] text-base-content/60"><span class="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center" style="background:#9CA3AF"><i class="fa-solid fa-car" style="color:white;font-size:8px;"></i></span>Movilización</span>
+      <span class="flex items-center gap-1.5 text-[10px] text-base-content/60"><span class="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center" style="background:var(--color-warning)"><i class="fa-solid fa-location-dot" style="color:white;font-size:8px;"></i></span>Llegada</span>
+      <span class="flex items-center gap-1.5 text-[10px] text-base-content/60"><span class="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center" style="background:var(--color-info)"><i class="fa-solid fa-wrench" style="color:white;font-size:8px;"></i></span>Inicio trabajos</span>
+      <span class="flex items-center gap-1.5 text-[10px] text-base-content/60"><span class="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center" style="background:var(--color-primary)"><i class="fa-solid fa-flag-checkered" style="color:white;font-size:8px;"></i></span>Cierre</span>
+      <span class="flex items-center gap-1.5 text-[10px] text-base-content/60"><span class="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center" style="background:var(--color-success)"><i class="fa-solid fa-screwdriver-wrench" style="color:white;font-size:8px;"></i></span>Finalizado</span>
+    </div>
     <div id="map-loading" class="absolute inset-0 bg-base-100/60 grid place-items-center hidden">
       <span class="loading loading-spinner loading-md text-info"></span>
     </div>
@@ -631,12 +632,13 @@
   var warningColor = cssVar('--color-warning') || '#F59E0B';
   var successColor = cssVar('--color-success') || '#10B981';
   var errorColor   = cssVar('--color-error')   || '#EF4444';
+  var neutralColor = cssVar('--color-neutral') || '#374151';
   var WOM_COLOR    = '#E6007E';
   var PTI_COLOR    = infoColor;
 
   // Color por estado de visita
   var STATUS_COLORS = {
-    pendiente_aprobacion: warningColor,
+    pendiente_aprobacion: neutralColor,
     programada:           infoColor,
     en_camino:            '#F97316',
     llegada:              warningColor,
@@ -647,39 +649,62 @@
     rechazada:            '#9CA3AF',
   };
 
-  // Toggle: mostrar todos los sitios del catálogo
-  var showAllSites = false;
+  // Estado de los dos toggles — cada uno controla UNA capa, sin dependencia entre sí
+  var showAllSites  = false;
+  var visitsVisible = true;
 
-  // Toggle: solo sitios (ocultar visitas)
-  var sitesOnlyMode = false;
-
-  var sitesOnlyBtn  = document.getElementById('sites-only-btn');
-
-  // checked = visitas visibles; unchecked = visitas ocultas (solo sitios)
-  sitesOnlyBtn.addEventListener('change', function () {
-    var visitsVisible = this.checked;
-    sitesOnlyMode = !visitsVisible;
-    if (!visitsVisible) {
-      map.removeLayer(clusterGroup);
-      showAllSites = true;
-      toggleBtn.checked = true;
-      map.addLayer(allSitesGroup);
-    } else {
+  function applyLayerState() {
+    // Visitas
+    if (visitsVisible && !map.hasLayer(clusterGroup)) {
       map.addLayer(clusterGroup);
-      if (!toggleBtn.checked) {
-        showAllSites = false;
-        map.removeLayer(allSitesGroup);
-      }
+    } else if (!visitsVisible && map.hasLayer(clusterGroup)) {
+      map.removeLayer(clusterGroup);
     }
+    // Sitios del catálogo
+    if (showAllSites && !map.hasLayer(allSitesGroup)) {
+      map.addLayer(allSitesGroup);
+    } else if (!showAllSites && map.hasLayer(allSitesGroup)) {
+      map.removeLayer(allSitesGroup);
+    }
+  }
+
+  var sitesOnlyBtn = document.getElementById('sites-only-btn');
+  sitesOnlyBtn.addEventListener('change', function () {
+    visitsVisible = this.checked;
+    applyLayerState();
     updateFormState();
     saveMapFilters();
   });
 
-  var map = L.map('operations-map', { zoomControl: true });
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  var map = L.map('operations-map', { zoomControl: true, maxZoom: 19 });
+
+  var layerStreet = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap',
     maxZoom: 19,
-  }).addTo(map);
+    maxNativeZoom: 19,
+  });
+  var layerSatellite = L.tileLayer('https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '© Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19,
+    maxNativeZoom: 19,
+  });
+  var layerTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenTopoMap (CC-BY-SA)',
+    maxZoom: 17,
+    maxNativeZoom: 17,
+  });
+
+  layerStreet.addTo(map);
+  L.control.layers({
+    'Mapa': layerStreet,
+    'Satélite': layerSatellite,
+    'Topografía': layerTopo,
+  }, {}, { position: 'topright', collapsed: false }).addTo(map);
+
+  map.on('baselayerchange', function (e) {
+    map.setMaxZoom(e.layer.options.maxZoom || 19);
+  });
+
   map.setView([-33.45, -70.65], 6);
 
   // Capa 1: una visita = un marcador, con color por estado
@@ -689,20 +714,38 @@
   // Capa 2: globos balloon para todos los sitios del catálogo (el toggle la añade/quita)
   var allSitesGroup = L.layerGroup();
 
-  // ── Iconos ──
+  // ── Iconos de tracking (mismo esquema que visit_detail) ──
 
-  function visitIcon(status) {
-    var color = STATUS_COLORS[status] || '#6B7280';
-    var html = '<div style="width:30px;height:30px;border-radius:50%;background:' + color
-      + ';border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.28);'
+  var EVENT_COLORS = {
+    salida:     '#9CA3AF',
+    llegada:    warningColor,
+    inicio:     infoColor,
+    cierre:     cssVar('--color-primary') || '#E6007E',
+    finalizado: successColor,
+  };
+  var EVENT_ICONS = {
+    salida:     'fa-car',
+    llegada:    'fa-location-dot',
+    inicio:     'fa-wrench',
+    cierre:     'fa-flag-checkered',
+    finalizado: 'fa-screwdriver-wrench',
+  };
+
+  function trackingIcon(event) {
+    var isSalida  = event === 'salida';
+    var bg        = isSalida ? 'rgba(0,0,0,0.15)' : (EVENT_COLORS[event] || '#6B7280');
+    var iconColor = isSalida ? 'rgba(0,0,0,0.5)'  : 'white';
+    var iconClass = EVENT_ICONS[event] || 'fa-circle';
+    var html = '<div style="width:26px;height:26px;border-radius:50%;background:' + bg
+      + ';border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.28);'
       + 'display:flex;align-items:center;justify-content:center;">'
-      + '<i class="fa-solid fa-person-digging" style="color:white;font-size:11px;"></i>'
+      + '<i class="fa-solid ' + iconClass + '" style="color:' + iconColor + ';font-size:10px;"></i>'
       + '</div>';
     return L.divIcon({
       className: '',
-      iconSize: [30, 30],
-      iconAnchor: [15, 15],
-      popupAnchor: [0, -18],
+      iconSize: [26, 26],
+      iconAnchor: [13, 13],
+      popupAnchor: [0, -16],
       html: html,
     });
   }
@@ -725,14 +768,18 @@
 
   // ── Popups ──
 
-  function buildVisitPopup(v) {
-    var color = STATUS_COLORS[v.status] || '#6B7280';
-    return '<div style="min-width:190px;">'
-      + '<p style="font-size:12px;font-weight:700;color:' + color + ';margin:0 0 5px;">' + v.status_display + '</p>'
-      + '<p style="font-size:13px;font-weight:700;margin:0 0 1px;">' + v.site_code + '</p>'
-      + '<p style="font-size:11px;color:#666;margin:0 0 6px;">' + v.technician_name + ' · ' + v.scheduled_date + '</p>'
-      + (v.tracking_count ? '<p style="font-size:10px;color:#10B981;margin:0 0 6px;">📍 ' + v.tracking_count + ' evento(s) GPS</p>' : '')
-      + '<a href="/manager/visits/' + v.id + '/" style="display:block;font-size:11px;font-weight:600;color:#3B82F6;text-decoration:none;">Ver detalle →</a>'
+  function buildTrackingPopup(tp, visitMap) {
+    var color = EVENT_COLORS[tp.event] || '#6B7280';
+    var v     = visitMap[tp.visit_id] || {};
+    var ts    = tp.timestamp ? new Date(tp.timestamp) : null;
+    var timeStr = ts ? ts.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }) : '';
+    var dateStr = ts ? ts.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' }) : '';
+    return '<div style="min-width:180px;">'
+      + '<p style="font-size:12px;font-weight:700;color:' + color + ';margin:0 0 4px;">' + tp.event_display + '</p>'
+      + (v.site_code ? '<p style="font-size:13px;font-weight:700;margin:0 0 1px;">' + v.site_code + '</p>' : '')
+      + (v.technician_name ? '<p style="font-size:11px;color:#666;margin:0 0 4px;">' + v.technician_name + '</p>' : '')
+      + (timeStr ? '<p style="font-size:10px;color:#999;margin:0 0 6px;font-family:monospace;">' + dateStr + ' ' + timeStr + '</p>' : '')
+      + (v.id ? '<a href="/manager/visits/' + v.id + '/" style="display:block;font-size:11px;font-weight:600;color:#3B82F6;text-decoration:none;">Ver detalle →</a>' : '')
       + '</div>';
   }
 
@@ -769,21 +816,23 @@
       .then(function (data) {
         clusterGroup.clearLayers();
 
-        var visits = data.visits || [];
+        var trackingPoints = data.tracking_points || [];
+        var visitMap = {};
+        (data.visits || []).forEach(function (v) { visitMap[v.id] = v; });
 
-        if (!visits.length && !showAllSites) {
+        if (!trackingPoints.length && !showAllSites) {
           loading.classList.add('hidden');
           emptyMsg.classList.remove('hidden');
           return;
         }
 
         var bounds = [];
-        visits.forEach(function (v) {
-          if (v.lat == null || v.lng == null) return;
-          var marker = L.marker([v.lat, v.lng], { icon: visitIcon(v.status) });
-          marker.bindPopup(buildVisitPopup(v), { maxWidth: 250 });
+        trackingPoints.forEach(function (tp) {
+          if (tp.lat == null || tp.lng == null) return;
+          var marker = L.marker([tp.lat, tp.lng], { icon: trackingIcon(tp.event) });
+          marker.bindPopup(buildTrackingPopup(tp, visitMap), { maxWidth: 250 });
           clusterGroup.addLayer(marker);
-          bounds.push([v.lat, v.lng]);
+          bounds.push([tp.lat, tp.lng]);
         });
 
         if (bounds.length) {
@@ -792,8 +841,7 @@
           emptyMsg.classList.remove('hidden');
         }
 
-        var siteCount = (data.sites || []).length;
-        summaryT.textContent = siteCount + ' sitio(s) · ' + visits.length + ' visita(s)'
+        summaryT.textContent = trackingPoints.length + ' punto(s) GPS'
           + (showAllSites ? ' (+ catálogo completo)' : '');
         summary.classList.remove('hidden');
         loading.classList.add('hidden');
@@ -814,7 +862,7 @@
         marker.bindPopup(buildGhostPopup(site), { maxWidth: 220 });
         allSitesGroup.addLayer(marker);
       });
-      if (showAllSites) map.addLayer(allSitesGroup);
+      applyLayerState();
     })
     .catch(function () {});
 
@@ -823,17 +871,7 @@
   var toggleBtn = document.getElementById('sites-toggle-btn');
   toggleBtn.addEventListener('change', function () {
     showAllSites = this.checked;
-    if (showAllSites) {
-      map.addLayer(allSitesGroup);
-    } else {
-      map.removeLayer(allSitesGroup);
-      if (sitesOnlyMode) {
-        sitesOnlyMode = false;
-        sitesOnlyBtn.checked = false;
-        map.addLayer(clusterGroup);
-        updateFormState();
-      }
-    }
+    applyLayerState();
     saveMapFilters();
   });
 
@@ -841,10 +879,9 @@
 
   function updateFormState() {
     var form = document.getElementById('map-filter-form');
-    var visitsActive = !sitesOnlyMode;
     ['status', 'technician', 'date_from', 'date_to'].forEach(function (name) {
       var el = form.querySelector('[name="' + name + '"]');
-      if (el) el.disabled = !visitsActive;
+      if (el) el.disabled = !visitsVisible;
     });
   }
 
@@ -853,8 +890,8 @@
     var data = new FormData(form);
     var obj  = {};
     data.forEach(function (val, key) { obj[key] = val; });
-    obj._sites_only     = sitesOnlyMode ? '1' : '0';
-    obj._show_all_sites = showAllSites  ? '1' : '0';
+    obj._visits_visible  = visitsVisible  ? '1' : '0';
+    obj._show_all_sites  = showAllSites   ? '1' : '0';
     try { localStorage.setItem(MAP_KEY, JSON.stringify(obj)); } catch(e) {}
   }
 
@@ -870,16 +907,15 @@
       var el = form.querySelector('[name="' + key + '"]');
       if (el) el.value = obj[key];
     });
-    if (obj._sites_only === '1') {
-      sitesOnlyMode        = true;
+    if (obj._visits_visible === '0') {
+      visitsVisible        = false;
       sitesOnlyBtn.checked = false;
-      showAllSites         = true;
-      toggleBtn.checked    = true;
-      map.removeLayer(clusterGroup);
-    } else if (obj._show_all_sites === '1') {
+    }
+    if (obj._show_all_sites === '1') {
       showAllSites      = true;
       toggleBtn.checked = true;
     }
+    applyLayerState();
   }
 
   restoreMapFilters();

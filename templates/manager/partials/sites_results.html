@@ -7,11 +7,12 @@
     <table class="table table-sm table-fixed w-full">
       <thead>
         <tr>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[12%]">Cód. Sitio</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[12%]">Cod. Op.</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[36%]">Nombre Sitio</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[14%]">Empresa</th>
-          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-right w-[10%]">Alt. (m)</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[11%]">Cód. Sitio</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[10%]">Cod. Op.</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[28%]">Nombre Sitio</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[10%]">Empresa</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-center w-[8%]">Alt. (m)</th>
+          <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide w-[17%]">Coordenadas</th>
           <th class="text-xs font-semibold text-base-content/70 uppercase tracking-wide text-center w-[16%]">Acciones</th>
         </tr>
       </thead>
@@ -34,27 +35,51 @@
               {{ site.get_company_display }}
             </span>
           </td>
-          <td class="py-3.5 text-right">
+          <td class="py-3.5 text-center">
             <span class="font-mono text-sm text-base-content/60">
               {% if site.height is not None %}{{ site.height|intcomma }}{% else %}<span class="text-base-content/30">—</span>{% endif %}
             </span>
           </td>
+          <td class="py-3.5">
+            {% if site.latitude is not None and site.longitude is not None %}
+            <a href="https://www.google.com/maps/search/?api=1&query={{ site.latitude|stringformat:'.6f' }},{{ site.longitude|stringformat:'.6f' }}"
+               target="_blank"
+               class="group inline-flex items-center gap-1 text-info hover:underline"
+               title="Abrir en Google Maps">
+              <i class="fa-solid fa-location-dot text-[10px] opacity-60 group-hover:opacity-100"></i>
+              <span class="font-mono text-xs leading-tight">
+                {{ site.latitude|stringformat:'.6f' }}<br>{{ site.longitude|stringformat:'.6f' }}
+              </span>
+            </a>
+            {% else %}
+            <span class="text-base-content/30 text-xs">—</span>
+            {% endif %}
+          </td>
           <td class="py-3.5 text-center">
             <button type="button"
-              class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity" title="Ver"
-              data-url="{% url 'manager:site_detail' site.pk %}"
-              onclick="openSiteDetail(this.dataset.url)">
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-view hover:opacity-70 transition-opacity" title="Ver"
+              onclick="openSiteDetail(this)"
+              data-code="{{ site.code }}"
+              data-operator-code="{{ site.operator_code|default:'' }}"
+              data-name="{{ site.name }}"
+              data-latitude="{% if site.latitude is not None %}{{ site.latitude|stringformat:'.6f' }}{% endif %}"
+              data-longitude="{% if site.longitude is not None %}{{ site.longitude|stringformat:'.6f' }}{% endif %}"
+              data-height="{% if site.height is not None %}{{ site.height }}{% endif %}"
+              data-company="{{ site.get_company_display }}"
+              data-comuna="{{ site.comuna|default:'' }}"
+              data-region="{{ site.region|default:'' }}"
+              data-is-active="{{ site.is_active|yesno:'true,false' }}">
               <i class="fa-solid fa-eye"></i>
             </button>
             {% if is_super_manager %}
             <button type="button"
-              class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-edit hover:opacity-70 transition-opacity" title="Editar"
               data-url="{% url 'manager:site_edit' site.pk %}"
-              onclick="openSiteEdit(this.dataset.url)">
+              onclick="openSiteEdit(this.dataset.url,'edit-tpl-site-{{ site.pk }}')">
               <i class="fa-solid fa-pen"></i>
             </button>
             <button type="button"
-              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-delete hover:opacity-70 transition-opacity" title="Eliminar"
               data-url="{% url 'manager:site_delete' site.pk %}"
               data-name="{{ site.code }} — {{ site.name }}"
               onclick="deleteSite(this.dataset.url, this.dataset.name, this.closest('tr'))">
@@ -85,20 +110,27 @@
         </div>
         <div class="flex items-center gap-1 shrink-0">
           <button type="button"
-            class="inline-flex items-center justify-center w-8 h-8 text-view hover:opacity-70 transition-opacity" title="Ver"
-            data-url="{% url 'manager:site_detail' site.pk %}"
-            onclick="openSiteDetail(this.dataset.url)">
+            class="inline-flex items-center justify-center w-8 h-8 cursor-pointer text-view hover:opacity-70 transition-opacity" title="Ver"
+            onclick="openSiteDetail(this)"
+            data-code="{{ site.code }}"
+            data-operator-code="{{ site.operator_code|default:'' }}"
+            data-name="{{ site.name }}"
+            data-latitude="{% if site.latitude is not None %}{{ site.latitude|stringformat:'.6f' }}{% endif %}"
+            data-longitude="{% if site.longitude is not None %}{{ site.longitude|stringformat:'.6f' }}{% endif %}"
+            data-height="{% if site.height is not None %}{{ site.height }}{% endif %}"
+            data-company="{{ site.get_company_display }}"
+            data-is-active="{{ site.is_active|yesno:'true,false' }}">
             <i class="fa-solid fa-eye text-sm"></i>
           </button>
           {% if is_super_manager %}
           <button type="button"
-            class="inline-flex items-center justify-center w-8 h-8 text-edit hover:opacity-70 transition-opacity" title="Editar"
+            class="inline-flex items-center justify-center w-8 h-8 cursor-pointer text-edit hover:opacity-70 transition-opacity" title="Editar"
             data-url="{% url 'manager:site_edit' site.pk %}"
-            onclick="openSiteEdit(this.dataset.url)">
+            onclick="openSiteEdit(this.dataset.url,'edit-tpl-site-{{ site.pk }}')">
             <i class="fa-solid fa-pen text-sm"></i>
           </button>
           <button type="button"
-            class="inline-flex items-center justify-center w-8 h-8 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+            class="inline-flex items-center justify-center w-8 h-8 cursor-pointer text-delete hover:opacity-70 transition-opacity" title="Eliminar"
             data-url="{% url 'manager:site_delete' site.pk %}"
             data-name="{{ site.code }} — {{ site.name }}"
             onclick="deleteSite(this.dataset.url, this.dataset.name, this.closest('.card'))">
@@ -110,14 +142,15 @@
       <p class="text-sm font-medium text-base-content mt-1">{{ site.name }}</p>
       <div class="flex items-center justify-between gap-2 mt-2">
         <div class="flex flex-wrap gap-x-4 gap-y-1">
-          <span class="text-xs text-base-content/40">
-            <span class="font-medium text-base-content/60">Lat</span>
-            <span class="font-mono ml-1">{{ site.latitude|stringformat:".6f" }}</span>
-          </span>
-          <span class="text-xs text-base-content/40">
-            <span class="font-medium text-base-content/60">Lon</span>
-            <span class="font-mono ml-1">{{ site.longitude|stringformat:".6f" }}</span>
-          </span>
+          {% if site.latitude is not None and site.longitude is not None %}
+          <a href="https://www.google.com/maps/search/?api=1&query={{ site.latitude|stringformat:'.6f' }},{{ site.longitude|stringformat:'.6f' }}"
+             target="_blank"
+             class="inline-flex items-center gap-1 text-info hover:underline text-xs font-mono"
+             title="Abrir en Google Maps">
+            <i class="fa-solid fa-location-dot text-[10px]"></i>
+            {{ site.latitude|stringformat:".6f" }}, {{ site.longitude|stringformat:".6f" }}
+          </a>
+          {% endif %}
           {% if site.height is not None %}
           <span class="text-xs text-base-content/40">
             <span class="font-medium text-base-content/60">Alt</span>
@@ -133,6 +166,10 @@
   </div>
   {% endfor %}
 </div>
+
+{% if is_super_manager %}
+{% for site in sites %}<template id="edit-tpl-site-{{ site.pk }}">{% include "manager/site_form_modal.html" with form=site.edit_form %}</template>{% endfor %}
+{% endif %}
 
 {% if page_obj.has_other_pages %}
 <div class="flex justify-center items-center mt-6 gap-2">

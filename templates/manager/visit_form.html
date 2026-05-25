@@ -10,7 +10,7 @@
       {% if is_edit %}Editar Servicio #{{ visit.pk }}{% else %}Nueva Visita{% endif %}
     </h1>
     {% if not is_edit %}
-      {% if request.user.role == 'super_manager' %}
+      {% if request.user.role == 'super_manager' or request.user.is_superuser %}
       <p class="text-xs text-base-content/40 mt-0.5">Como manager, el servicio se aprueba automáticamente al crearlo.</p>
       {% else %}
       <p class="text-xs text-base-content/40 mt-0.5">El servicio quedará pendiente de aprobación del manager antes de asignarse al técnico.</p>
@@ -67,6 +67,7 @@
                  placeholder="Escribe al menos 3 caracteres…"
                  autocomplete="off"
                  class="flex-1 bg-transparent outline-none text-sm py-2.5 text-base-content placeholder:text-base-content/30">
+          <span id="site-spinner" class="loading loading-spinner loading-xs text-primary hidden shrink-0"></span>
           <button type="button" id="site-clear"
                   class="shrink-0 text-base-content/30 hover:text-base-content hidden"
                   title="Limpiar selección">
@@ -118,7 +119,7 @@
     <a href="{% url 'manager:visits_approval' %}" class="btn btn-ghost btn-sm h-9 min-h-0">Cancelar</a>
     <button type="submit" class="btn btn-success btn-sm h-9 min-h-0">
       <i class="fa-solid fa-paper-plane text-xs"></i>
-      {% if is_edit %}Guardar cambios{% elif request.user.role == 'super_manager' %}Crear y aprobar{% else %}Enviar para aprobación{% endif %}
+      {% if is_edit %}Guardar cambios{% elif request.user.role == 'super_manager' or request.user.is_superuser %}Crear y aprobar{% else %}Enviar para aprobación{% endif %}
     </button>
   </div>
 </form>
@@ -129,6 +130,7 @@
   const siteIdInput  = document.getElementById('site-id');
   const resultsList  = document.getElementById('site-results');
   const clearBtn     = document.getElementById('site-clear');
+  const spinner      = document.getElementById('site-spinner');
   const searchUrl    = '{% url "manager:sites_search" %}';
 
   let debounceTimer  = null;
@@ -166,13 +168,15 @@
   });
 
   function fetchSites(q) {
+    spinner.classList.remove('hidden');
     fetch(searchUrl + '?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
       .then(r => {
         if (!r.ok) throw new Error(r.status);
         return r.json();
       })
-      .then(sites => renderResults(sites))
+      .then(sites => { spinner.classList.add('hidden'); renderResults(sites); })
       .catch(() => {
+        spinner.classList.add('hidden');
         resultsList.innerHTML = '<li class="px-4 py-3 text-sm text-error/70">Error al buscar sitios</li>';
         showResults();
       });

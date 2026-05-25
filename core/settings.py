@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'home.context_processors.theme',
                 'visits.context_processors.pending_visits_count',
+                'users.context_processors.pending_technicians_count',
             ],
         },
     },
@@ -115,14 +116,16 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'es'
 TIME_ZONE = 'America/La_Paz'
 USE_I18N = True
-USE_L10N = False      # desactivar formato por locale; usamos los valores explícitos de abajo
 USE_TZ = True
 
-# Formato numérico estándar del proyecto: punto decimal, coma como separador de miles
+# Django 6.0 eliminó USE_L10N; la localización siempre está activa.
+# FORMAT_MODULE_PATH sobreescribe el formato del locale 'es' para usar
+# punto como separador decimal y coma como separador de miles.
+FORMAT_MODULE_PATH = ['core.formats']
 DECIMAL_SEPARATOR = '.'
 THOUSAND_SEPARATOR = ','
 NUMBER_GROUPING = 3
-USE_THOUSAND_SEPARATOR = False  # no auto-insertar en todos los números; usar |intcomma explícito
+USE_THOUSAND_SEPARATOR = False  # usar |intcomma explícito en templates
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -269,6 +272,7 @@ INSTALLED_APPS += [
     'users',
     'sites',
     'visits',
+    'photos',
     'dashboard',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
@@ -311,6 +315,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_CLAIM': 'user_id',
+    'UPDATE_LAST_LOGIN': True,
 }
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG

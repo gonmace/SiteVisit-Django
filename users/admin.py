@@ -10,8 +10,8 @@ from users.resources import UserResource
 class UserAdmin(ImportExportModelAdmin, BaseUserAdmin):
     resource_classes = [UserResource]
 
-    list_display  = ['email', 'get_full_name', 'rut', 'cargo', 'company', 'role', 'status', 'is_active']
-    list_filter   = ['company', 'role', 'status']
+    list_display  = ['email', 'get_full_name', 'rut', 'cargo', 'company', 'role', 'status', 'is_active', 'is_superuser']
+    list_filter   = []
     search_fields = ['email', 'first_name', 'last_name', 'rut']
     ordering      = ['email']
 

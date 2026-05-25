@@ -10,6 +10,8 @@ class Site(models.Model):
     latitude      = models.FloatField()
     longitude     = models.FloatField()
     height        = models.IntegerField(null=True, blank=True)
+    comuna        = models.CharField(max_length=64, blank=True, default='')
+    region        = models.CharField(max_length=64, blank=True, default='')
     company       = models.CharField(max_length=8, choices=User.Company.choices)
     is_active     = models.BooleanField(default=True)
     created_at    = models.DateTimeField(auto_now_add=True)

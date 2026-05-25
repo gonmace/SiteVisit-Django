@@ -5,6 +5,7 @@
 @source "../../../users";
 @source "../../../sites";
 @source "../../../visits";
+@source "../../../photos";
 @source "../../../dashboard";
 @plugin "@tailwindcss/forms" {
   strategy: class;
@@ -40,7 +41,7 @@
   --color-warning-content: #1c1c1e;
   --color-error: #b91c1c;
   --color-error-content: #ffffff;
-  --color-edit:           #16a34a;
+  --color-edit:           #d97706;
   --color-edit-content:   #fff;
   --color-delete:         #cc0000;
   --color-delete-content: #fff;
@@ -78,7 +79,7 @@
   --color-warning-content: #1c1c1e;
   --color-error: #f87171;
   --color-error-content: #1c1c1e;
-  --color-edit:           #34d399;
+  --color-edit:           #fbbf24;
   --color-edit-content:   #1c1c1e;
   --color-delete:         #ff4040;
   --color-delete-content: #fff;
@@ -100,7 +101,7 @@ html {
 
 /* Registrar colores custom como utilidades Tailwind (text-edit, text-delete, text-view) */
 @theme {
-  --color-edit:   #16a34a;
+  --color-edit:   #d97706;
   --color-delete: #cc0000;
   --color-view:   #2563eb;
 }

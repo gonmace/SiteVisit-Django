@@ -1,6 +1,21 @@
 from django.db import models
 
 
+class AppRelease(models.Model):
+    apk         = models.FileField(upload_to='releases/', help_text='Archivo APK de la app Android')
+    version     = models.CharField(max_length=20, blank=True, help_text='Ej: 1.2.3')
+    notes       = models.TextField(blank=True, help_text='Notas de la versión (opcional)')
+    uploaded_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'release de app'
+        verbose_name_plural = 'releases de app'
+        ordering            = ['-uploaded_at']
+
+    def __str__(self):
+        return f'v{self.version}' if self.version else f'Release {self.uploaded_at.date()}'
+
+
 class SiteSetting(models.Model):
     """Empresa configurable desde el admin. Fuente única de verdad para
     nombre + paleta. Sustituye los overrides hardcodeados (#E6007E para wom)."""

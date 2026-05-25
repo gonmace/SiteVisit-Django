@@ -1,0 +1,87 @@
+{% extends "manager/base.html" %}
+{% load humanize %}
+{% block title %}Managers{% endblock %}
+
+{% block content %}
+
+<div class="flex items-center justify-between gap-2 mb-6">
+  <div class="shrink-0">
+    <div class="flex items-center gap-2.5">
+      <h1 class="text-xl font-bold text-base-content tracking-tight">Managers</h1>
+      <div class="flex items-center gap-1.5">
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-success/15 text-success text-[10px] font-bold" title="Activos">{{ count_active }}</span>
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-error/15 text-error text-[10px] font-bold" title="Inactivos">{{ count_inactive }}</span>
+      </div>
+    </div>
+    <p class="text-xs text-base-content/40 mt-0.5">{{ page_obj.paginator.count|intcomma }} manager(s)</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <form method="get" id="managers-filter-form" class="flex items-center gap-2">
+      <input type="search" name="q" value="{{ q }}"
+             placeholder="Nombre/email…"
+             id="managers-search"
+             autocomplete="off"
+             class="input input-bordered input-sm h-9 w-32 sm:w-48 text-sm">
+      {% if q %}
+        <a href="{% url 'manager:managers_list' %}" class="btn btn-ghost btn-sm h-9 min-h-0 text-xs text-base-content/50">
+          Limpiar
+        </a>
+      {% endif %}
+    </form>
+    <a href="{% url 'manager:manager_create' %}" class="btn btn-success btn-sm h-9 min-h-0 px-3 text-xs font-semibold">
+      <span class="hidden sm:inline">+ Agregar</span>
+      <span class="sm:hidden">+</span>
+    </a>
+  </div>
+</div>
+
+<div id="managers-results">
+  {% include "manager/partials/managers_results.html" %}
+</div>
+
+<script>
+(function () {
+  var input   = document.getElementById('managers-search');
+  var results = document.getElementById('managers-results');
+  var timer;
+
+  if (input.value) {
+    input.focus();
+    input.value = input.value;
+  }
+
+  function search(q) {
+    var url = '{% url "manager:managers_list" %}' + (q ? '?q=' + encodeURIComponent(q) : '');
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        results.innerHTML = html;
+        history.replaceState(null, '', url);
+      });
+  }
+
+  input.addEventListener('input', function () {
+    clearTimeout(timer);
+    var val = input.value.trim();
+    timer = setTimeout(function () { search(val); }, 500);
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { clearTimeout(timer); search(input.value.trim()); }
+  });
+})();
+</script>
+
+<!-- Modal editar manager -->
+<dialog id="mgr-modal" class="modal">
+  <div class="modal-box max-w-lg p-0 overflow-hidden">
+    <div class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200">
+      <h3 id="mgr-modal-title" class="text-base font-bold text-base-content">Editar</h3>
+      <button onclick="document.getElementById('mgr-modal').close()" class="btn btn-ghost btn-xs btn-circle">✕</button>
+    </div>
+    <div id="mgr-modal-body" class="p-6"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+{% endblock %}

@@ -24,9 +24,29 @@
       {% endif %}
     </form>
     {% if is_super_manager %}
-      <a href="{% url 'manager:site_import' %}" class="hidden sm:inline-flex btn btn-secondary btn-sm h-9 min-h-0 text-xs">
-        Importar Excel
-      </a>
+      <div class="hidden sm:block dropdown dropdown-end">
+        <button tabindex="0" class="btn btn-secondary btn-sm h-9 min-h-0 text-xs gap-1.5">
+          <i class="fa-solid fa-file-excel"></i> Excel
+          <i class="fa-solid fa-chevron-down text-[9px] opacity-70"></i>
+        </button>
+        <ul tabindex="0" class="dropdown-content menu menu-sm bg-base-100 rounded-box shadow-lg border border-base-200 w-36 p-1 z-50 mt-1">
+          <li>
+            <a href="{% url 'manager:site_export' %}" class="flex items-center gap-2 text-xs">
+              <i class="fa-solid fa-download w-3.5 text-info"></i> Exportar
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'manager:site_import' %}" class="flex items-center gap-2 text-xs">
+              <i class="fa-solid fa-upload w-3.5 text-success"></i> Importar
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'manager:site_template' %}" class="flex items-center gap-2 text-xs">
+              <i class="fa-solid fa-file-lines w-3.5 text-base-content/40"></i> Plantilla
+            </a>
+          </li>
+        </ul>
+      </div>
       <a href="{% url 'manager:site_create' %}" class="btn btn-success btn-sm h-9 min-h-0 px-4 text-xs font-semibold">
         + Agregar
       </a>
@@ -87,22 +107,26 @@
   });
 })();
 
-function openSiteDetail(url) {
+function openSiteDetail(btn) {
   var modal = document.getElementById('site-modal');
   var title = document.getElementById('site-modal-title');
   var body  = document.getElementById('site-modal-body');
-  body.innerHTML = '<div class="flex justify-center py-8"><span class="loading loading-spinner loading-md text-primary"></span></div>';
-  title.textContent = 'Detalle sitio';
+  var ds = btn.dataset;
+  var d = {
+    code:          ds.code,
+    operator_code: ds.operatorCode || '',
+    name:          ds.name,
+    latitude:      ds.latitude  ? parseFloat(ds.latitude)  : null,
+    longitude:     ds.longitude ? parseFloat(ds.longitude) : null,
+    height:        ds.height    ? parseInt(ds.height, 10)  : null,
+    comuna:        ds.comuna    || '',
+    region:        ds.region    || '',
+    company:       ds.company,
+    is_active:     ds.isActive === 'true',
+  };
+  title.textContent = d.code + ' — ' + d.name;
+  body.innerHTML = buildDetailHTML(d);
   modal.showModal();
-  fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-    .then(function (r) { return r.json(); })
-    .then(function (d) {
-      title.textContent = d.code + ' — ' + d.name;
-      body.innerHTML = buildDetailHTML(d);
-    })
-    .catch(function () {
-      body.innerHTML = '<p class="text-sm text-error">Error al cargar el sitio.</p>';
-    });
 }
 
 function buildDetailHTML(d) {
@@ -112,10 +136,12 @@ function buildDetailHTML(d) {
       '<span class="text-sm text-base-content">' + value + '</span>' +
       '</div>';
   }
-  var lat  = d.latitude  != null ? d.latitude.toFixed(6)  : '—';
-  var lon  = d.longitude != null ? d.longitude.toFixed(6) : '—';
-  var alt  = d.height    != null ? d.height + ' m'        : '—';
-  var op   = d.operator_code || '—';
+  var lat    = d.latitude  != null ? d.latitude.toFixed(6)  : '—';
+  var lon    = d.longitude != null ? d.longitude.toFixed(6) : '—';
+  var alt    = d.height    != null ? d.height + ' m'        : '—';
+  var op     = d.operator_code || '—';
+  var comuna = d.comuna || '—';
+  var region = d.region || '—';
   var status = d.is_active
     ? '<span class="badge badge-sm badge-success badge-outline">Activo</span>'
     : '<span class="badge badge-sm badge-error badge-outline">Inactivo</span>';
@@ -124,15 +150,30 @@ function buildDetailHTML(d) {
     row('Nombre', d.name) +
     row('Latitud', '<span class="font-mono">' + lat + '</span>') +
     row('Longitud', '<span class="font-mono">' + lon + '</span>') +
-    row('Altitud', '<span class="font-mono">' + alt + '</span>') +
+    row('Altura', '<span class="font-mono">' + alt + '</span>') +
+    row('Comuna', comuna) +
+    row('Región', region) +
     row('Empresa', d.company) +
     row('Estado', status);
 }
 
-function openSiteEdit(url) {
+function openSiteEdit(url, tplId) {
   var modal = document.getElementById('site-modal');
   var title = document.getElementById('site-modal-title');
   var body  = document.getElementById('site-modal-body');
+
+  if (tplId) {
+    var tpl = document.getElementById(tplId);
+    if (tpl) {
+      title.textContent = 'Editar sitio';
+      body.innerHTML = tpl.innerHTML;
+      modal.showModal();
+      var form = body.querySelector('#site-edit-form');
+      if (form) { var t = form.dataset.title; if (t) title.textContent = t; setupEditForm(url, form); }
+      return;
+    }
+  }
+
   body.innerHTML = '<div class="flex justify-center py-8"><span class="loading loading-spinner loading-md text-primary"></span></div>';
   title.textContent = 'Editar sitio';
   modal.showModal();
@@ -141,11 +182,7 @@ function openSiteEdit(url) {
     .then(function (html) {
       body.innerHTML = html;
       var form = body.querySelector('#site-edit-form');
-      if (form) {
-        var t = form.dataset.title;
-        if (t) title.textContent = t;
-        setupEditForm(url, form);
-      }
+      if (form) { var t = form.dataset.title; if (t) title.textContent = t; setupEditForm(url, form); }
     })
     .catch(function () {
       body.innerHTML = '<p class="text-sm text-error">Error al cargar el formulario.</p>';
@@ -155,6 +192,8 @@ function openSiteEdit(url) {
 function setupEditForm(url, form) {
   form.addEventListener('submit', function (e) {
     e.preventDefault();
+    var submitBtn = form.querySelector('[type="submit"]');
+    if (submitBtn) _btnSpin(submitBtn);
     var data = new FormData(form);
     fetch(url, {
       method: 'POST',
@@ -175,6 +214,7 @@ function setupEditForm(url, form) {
         }
       })
       .catch(function () {
+        if (submitBtn) _btnRestore(submitBtn);
         Alert.error('Error al guardar los cambios.');
       });
   });
@@ -210,8 +250,8 @@ function deleteSite(url, name, rowEl) {
   }
 
   el.querySelector('.js-cancel').onclick = dismiss;
-  el.querySelector('.js-confirm').onclick = function () {
-    dismiss();
+  el.querySelector('.js-confirm').onclick = function (e) {
+    _btnSpin(e.currentTarget);
     var csrf = document.querySelector('#confirm-post-form [name=csrfmiddlewaretoken]').value;
     fetch(url, {
       method: 'POST',
@@ -219,6 +259,7 @@ function deleteSite(url, name, rowEl) {
     })
       .then(function (r) { return r.json(); })
       .then(function (d) {
+        dismiss();
         if (d.ok) {
           rowEl.remove();
           Alert.success(d.message);
@@ -226,7 +267,7 @@ function deleteSite(url, name, rowEl) {
           Alert.error('No se pudo eliminar el sitio.');
         }
       })
-      .catch(function () { Alert.error('Error al eliminar el sitio.'); });
+      .catch(function () { dismiss(); Alert.error('Error al eliminar el sitio.'); });
   };
 }
 </script>

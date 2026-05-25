@@ -1,8 +1,9 @@
 from django.contrib.auth.views import LoginView, LogoutView
-from django.urls import path
+from django.urls import include, path
 
 from dashboard.web_views import DashboardWebView
-from sites.web_views import SiteCreateView, SiteDeleteView, SiteDetailView, SiteImportView, SiteSearchJsonView, SitesListView, SiteUpdateView
+from home.web_views import AppReleaseView
+from sites.web_views import SiteCreateView, SiteDeleteView, SiteDetailView, SiteExportView, SiteImportView, SiteSearchJsonView, SiteTemplateView, SitesListView, SiteUpdateView
 from users.web_views import (
     ApproveActivationView,
     CoordinatorCreateView,
@@ -10,6 +11,11 @@ from users.web_views import (
     CoordinatorsListView,
     CoordinatorToggleStatusView,
     CoordinatorUpdateView,
+    ManagerCreateView,
+    ManagerDeleteView,
+    ManagersListView,
+    ManagerToggleStatusView,
+    ManagerUpdateView,
     PendingActivationsView,
     RejectActivationView,
     TechnicianCreateView,
@@ -26,6 +32,8 @@ from visits.web_views import (
     VisitCreateWebView,
     VisitDeleteView,
     VisitDetailWebView,
+    VisitPhotoBulkDeleteView,
+    VisitPhotoBulkDownloadView,
     VisitRejectView,
     VisitsApprovalView,
     VisitUpdateWebView,
@@ -49,17 +57,28 @@ urlpatterns = [
     path('visits/<int:pk>/edit/',        VisitUpdateWebView.as_view(),         name='visit_edit'),
     path('visits/<int:pk>/cancel/',       VisitCancelView.as_view(),            name='visit_cancel'),
     path('visits/<int:pk>/delete/',       VisitDeleteView.as_view(),            name='visit_delete'),
-    path('visits/<int:pk>/approve/',     VisitApproveView.as_view(),           name='visit_approve'),
-    path('visits/<int:pk>/reject/',      VisitRejectView.as_view(),            name='visit_reject'),
+    path('visits/<int:pk>/approve/',           VisitApproveView.as_view(),            name='visit_approve'),
+    path('visits/<int:pk>/reject/',            VisitRejectView.as_view(),             name='visit_reject'),
+    path('visits/photos/bulk-download/',       VisitPhotoBulkDownloadView.as_view(),  name='visit_photo_bulk_download'),
+    path('visits/photos/bulk-delete/',         VisitPhotoBulkDeleteView.as_view(),    name='visit_photo_bulk_delete'),
 
     # Sites
     path('sites/',                     SitesListView.as_view(),      name='sites_list'),
     path('sites/search/',              SiteSearchJsonView.as_view(), name='sites_search'),
     path('sites/new/',                 SiteCreateView.as_view(),     name='site_create'),
     path('sites/<int:pk>/',            SiteDetailView.as_view(),     name='site_detail'),
-    path('sites/import/',              SiteImportView.as_view(),  name='site_import'),
+    path('sites/import/',              SiteImportView.as_view(),    name='site_import'),
+    path('sites/export/',              SiteExportView.as_view(),    name='site_export'),
+    path('sites/template/',            SiteTemplateView.as_view(),  name='site_template'),
     path('sites/<int:pk>/edit/',       SiteUpdateView.as_view(),  name='site_edit'),
     path('sites/<int:pk>/delete/',     SiteDeleteView.as_view(),  name='site_delete'),
+
+    # Managers (solo superusuario)
+    path('managers/',                    ManagersListView.as_view(),       name='managers_list'),
+    path('managers/new/',                ManagerCreateView.as_view(),      name='manager_create'),
+    path('managers/<int:pk>/edit/',      ManagerUpdateView.as_view(),      name='manager_edit'),
+    path('managers/<int:pk>/delete/',    ManagerDeleteView.as_view(),      name='manager_delete'),
+    path('managers/<int:pk>/toggle/',    ManagerToggleStatusView.as_view(),name='manager_toggle'),
 
     # Coordinators
     path('coordinators/',                   CoordinatorsListView.as_view(),       name='coordinators_list'),
@@ -81,4 +100,10 @@ urlpatterns = [
     path('activations/',                  PendingActivationsView.as_view(),  name='pending_activations'),
     path('activations/<int:pk>/approve/', ApproveActivationView.as_view(),   name='approve_activation'),
     path('activations/<int:pk>/reject/',  RejectActivationView.as_view(),    name='reject_activation'),
+
+    # Photos
+    path('photos/', include('photos.urls', namespace='photos')),
+
+    # App release
+    path('app-release/', AppReleaseView.as_view(), name='app_release'),
 ]

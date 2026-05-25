@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from users.models import ProfilePhoto, User, UserDevice
-from users.permissions import IsManager, IsSameCompanyOrSuperManager
+from users.permissions import IsPortalUser, IsSameCompanyOrPrivileged
 from users.serializers import (
     ActivateSerializer,
     ClaimTechnicianSerializer,
@@ -26,7 +26,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
-    permission_classes = [IsAuthenticated, IsManager]
+    permission_classes = [IsAuthenticated, IsPortalUser]
 
     def perform_create(self, serializer):
         serializer.save()
@@ -153,7 +153,7 @@ class ActivateView(APIView):
 
 class PendingUsersView(generics.ListAPIView):
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated, IsManager]
+    permission_classes = [IsAuthenticated, IsPortalUser]
 
     def get_queryset(self):
         qs = User.objects.filter(status=User.Status.PENDING)
@@ -163,7 +163,7 @@ class PendingUsersView(generics.ListAPIView):
 
 
 class ApproveUserView(APIView):
-    permission_classes = [IsAuthenticated, IsManager, IsSameCompanyOrSuperManager]
+    permission_classes = [IsAuthenticated, IsPortalUser, IsSameCompanyOrPrivileged]
 
     def post(self, request, pk):
         try:
@@ -187,7 +187,7 @@ class ApproveUserView(APIView):
 
 
 class RejectUserView(APIView):
-    permission_classes = [IsAuthenticated, IsManager, IsSameCompanyOrSuperManager]
+    permission_classes = [IsAuthenticated, IsPortalUser, IsSameCompanyOrPrivileged]
 
     def post(self, request, pk):
         try:

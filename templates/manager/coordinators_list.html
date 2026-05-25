@@ -7,7 +7,13 @@
 <!-- Header + search -->
 <div class="flex items-center justify-between gap-2 mb-6">
   <div class="shrink-0">
-    <h1 class="text-xl font-bold text-base-content tracking-tight">Coordinadores</h1>
+    <div class="flex items-center gap-2.5">
+      <h1 class="text-xl font-bold text-base-content tracking-tight">Coordinadores</h1>
+      <div class="flex items-center gap-1.5">
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-success/15 text-success text-[10px] font-bold" title="Activos">{{ count_active }}</span>
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-error/15 text-error text-[10px] font-bold" title="Inactivos">{{ count_inactive }}</span>
+      </div>
+    </div>
     <p class="text-xs text-base-content/40 mt-0.5">{{ page_obj.paginator.count|intcomma }} coordinador(es)</p>
   </div>
   <div class="flex items-center gap-2">

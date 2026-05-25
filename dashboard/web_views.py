@@ -6,26 +6,21 @@ from django.db.models.functions import ExtractWeekDay
 from django.utils import timezone
 from django.views.generic import TemplateView
 
-from core.mixins import ManagerRequiredMixin
+from core.mixins import (
+    SuperManagerRequiredMixin, VisitsBaseQuerysetMixin, CompanyScopedQuerysetMixin,
+)
 from dashboard.views import _avg_work_duration_minutes
 from users.models import User
 from visits.models import Visit
 
 
-class DashboardWebView(ManagerRequiredMixin, TemplateView):
+class DashboardWebView(SuperManagerRequiredMixin, VisitsBaseQuerysetMixin, CompanyScopedQuerysetMixin, TemplateView):
     template_name = 'manager/dashboard.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.is_authenticated and request.user.role == User.Role.MANAGER:
-            from django.shortcuts import redirect
-            return redirect('manager:visits_approval')
-        return super().dispatch(request, *args, **kwargs)
-
     def _qs(self):
-        qs = Visit.objects.all()
-        if self.request.user.role == User.Role.MANAGER:
-            qs = qs.filter(technician__company=self.request.user.company)
-        return qs
+        return self.apply_company_filter(
+            self.base_visit_queryset(), 'technician__company'
+        )
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -56,18 +51,19 @@ class DashboardWebView(ManagerRequiredMixin, TemplateView):
         avg_approval_hours = None
         approved_qs = qs.filter(approved_at__isnull=False)
         if approved_qs.exists():
+            approved_ids = approved_qs.values_list('id', flat=True)
             total_approval_secs = sum(
                 (v.approved_at - v.created_at).total_seconds()
-                for v in approved_qs.only('approved_at', 'created_at')
+                for v in Visit.objects.filter(id__in=approved_ids).only('approved_at', 'created_at')
             )
             avg_approval_hours = round(total_approval_secs / approved_qs.count() / 3600, 1)
 
         completed_qs = qs.filter(status=Visit.Status.COMPLETADA)
 
         # Todos los técnicos — con conteo de completadas y canceladas
-        techs_base = User.objects.filter(role=User.Role.TECHNICIAN)
-        if self.request.user.role == User.Role.MANAGER:
-            techs_base = techs_base.filter(company=self.request.user.company)
+        techs_base = self.apply_company_filter(
+            User.objects.filter(role=User.Role.TECHNICIAN), 'company'
+        )
         top_techs = list(
             techs_base.annotate(
                 count=Count(Case(When(visits__status=Visit.Status.COMPLETADA, then=1), output_field=IntegerField())),
@@ -136,17 +132,13 @@ class DashboardWebView(ManagerRequiredMixin, TemplateView):
         trend_labels = trend_ranges['7']['labels']
         trend_data   = trend_ranges['7']['data']
 
-        by_company = None
-        if self.request.user.role == User.Role.SUPER_MANAGER:
-            by_company = {c: qs.filter(technician__company=c).count() for c in User.Company.values}
+        by_company = {c: qs.filter(technician__company=c).count() for c in User.Company.values}
 
         # Estadísticas de técnicos
-        tech_qs = User.objects.filter(role=User.Role.TECHNICIAN)
-        if self.request.user.role == User.Role.MANAGER:
-            tech_qs = tech_qs.filter(company=self.request.user.company)
+        tech_qs = self.apply_company_filter(
+            User.objects.filter(role=User.Role.TECHNICIAN), 'company'
+        )
         coord_qs = User.objects.filter(role=User.Role.MANAGER)
-        if self.request.user.role == User.Role.MANAGER:
-            coord_qs = coord_qs.filter(company=self.request.user.company)
         tech_stats = {
             'total':        tech_qs.count(),
             'active':       tech_qs.filter(status=User.Status.ACTIVE).count(),
@@ -157,10 +149,10 @@ class DashboardWebView(ManagerRequiredMixin, TemplateView):
         }
 
         # Contexto para filtros del mapa de operaciones
-        is_super = self.request.user.role == User.Role.SUPER_MANAGER
-        available_techs_qs = User.objects.filter(role=User.Role.TECHNICIAN)
-        if self.request.user.role == User.Role.MANAGER:
-            available_techs_qs = available_techs_qs.filter(company=self.request.user.company)
+        is_super = True
+        available_techs_qs = self.apply_company_filter(
+            User.objects.filter(role=User.Role.TECHNICIAN), 'company'
+        )
         available_technicians = list(
             available_techs_qs.order_by('first_name', 'last_name')
             .values('id', 'first_name', 'last_name', 'email')
@@ -193,6 +185,8 @@ class DashboardWebView(ManagerRequiredMixin, TemplateView):
             'by_company': by_company,
             'tech_stats': tech_stats,
             'is_super_manager': is_super,
+            'company_choices': User.Company.choices,
+            'company_filter': self.get_company_filter(),
             'available_technicians': available_technicians,
             'available_statuses': Visit.Status.choices,
             'map_date_from': (today - timedelta(days=29)).isoformat(),

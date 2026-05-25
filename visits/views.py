@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from users.models import User
-from users.permissions import IsTechnician
+from users.permissions import IsTechnician, IsPortalOrTechnician
 from visits.models import (
     STATUS_TO_GPS_EVENT,
     TECHNICIAN_TRANSITIONS,
@@ -25,7 +25,7 @@ from visits.serializers import (
 
 
 class VisitViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsPortalOrTechnician]
     filter_backends    = [DjangoFilterBackend]
     filterset_fields   = ['status', 'site', 'scheduled_date']
 
@@ -39,14 +39,17 @@ class VisitViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = Visit.objects.select_related('technician', 'site', 'coordinator', 'approved_by', 'rejected_by')
+        qs = Visit.objects.select_related(
+            'technician', 'site', 'coordinator', 'approved_by', 'rejected_by', 'cancelled_by',
+        ).prefetch_related('tracking_points')
         if user.role == User.Role.TECHNICIAN:
-            return qs.filter(technician=user).exclude(
-                status__in=[Visit.Status.PENDIENTE_APROBACION, Visit.Status.RECHAZADA]
+            today = timezone.now().date()
+            return (
+                qs.filter(technician=user)
+                .exclude(status__in=[Visit.Status.PENDIENTE_APROBACION, Visit.Status.RECHAZADA])
+                .exclude(status=Visit.Status.CANCELADA, scheduled_date__lt=today)
             )
-        if user.role == User.Role.MANAGER:
-            return qs.filter(technician__company=user.company)
-        return qs  # super_manager, viewer
+        return qs  # manager, super_manager, superuser
 
     def update(self, request, *args, **kwargs):
         raise MethodNotAllowed('PUT')
@@ -57,11 +60,28 @@ class VisitViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         raise MethodNotAllowed('DELETE')
 
+    _TERMINATED = {Visit.Status.CANCELADA, Visit.Status.RECHAZADA, Visit.Status.COMPLETADA}
+
+    @action(detail=True, methods=['get'], url_path='check-status')
+    def check_status(self, request, pk=None):
+        """Lightweight endpoint for the Flutter app to poll cancellation state.
+        Works even for cancelled visits (bypasses the technician queryset filter)."""
+        try:
+            visit = Visit.objects.only('id', 'status').get(pk=pk, technician=request.user)
+        except Visit.DoesNotExist:
+            return Response({'status': 'not_found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'id': visit.pk, 'status': visit.status})
+
     @action(detail=True, methods=['post'], url_path='status')
     def update_status(self, request, pk=None, version=None):
         visit = self.get_object()
         if not IsTechnician().has_permission(request, self):
             return Response({'detail': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        if visit.status in self._TERMINATED:
+            return Response(
+                {'detail': 'visit_terminated', 'status': visit.status},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         serializer = VisitStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -119,6 +139,11 @@ class VisitViewSet(viewsets.ModelViewSet):
         visit = self.get_object()
         if not IsTechnician().has_permission(request, self):
             return Response({'detail': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        if visit.status in self._TERMINATED:
+            return Response(
+                {'detail': 'visit_terminated', 'status': visit.status},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         data = request.data if isinstance(request.data, list) else [request.data]
         serializer = TrackingPointSerializer(data=data, many=True)
@@ -135,6 +160,11 @@ class VisitViewSet(viewsets.ModelViewSet):
         visit = self.get_object()
         if not IsTechnician().has_permission(request, self):
             return Response({'detail': 'forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        if visit.status in self._TERMINATED:
+            return Response(
+                {'detail': 'visit_terminated', 'status': visit.status},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         files = request.FILES.getlist('image')
         if not files:

@@ -129,7 +129,7 @@
     </form>
   </div>
 
-  {% if request.user.role == 'super_manager' and object and object.device %}
+  {% if object and object.device and request.user.role == 'super_manager' or object and object.device and request.user.is_superuser %}
   <div class="bg-base-100 rounded-2xl border-2 border-error/20 shadow-xs p-5 mt-4">
     <div class="flex items-center justify-between gap-4">
       <div>

@@ -9,14 +9,12 @@ from rest_framework.views import APIView
 
 from sites.models import Site
 from users.models import User
-from visits.models import Visit
+from users.permissions import IsDashboardConsumer
+from visits.models import Visit, VisitTrackingPoint
 
 
 def _visits_for_user(user):
-    qs = Visit.objects.all()
-    if user.role == User.Role.MANAGER:
-        qs = qs.filter(technician__company=user.company)
-    return qs
+    return Visit.objects.all()
 
 
 def _avg_work_duration_minutes(qs):
@@ -37,15 +35,16 @@ def _avg_work_duration_minutes(qs):
 
 
 class StatsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsDashboardConsumer]
 
     def get(self, request, version=None):
         user = request.user
-        allowed = (User.Role.MANAGER, User.Role.SUPER_MANAGER, User.Role.VIEWER)
-        if user.role not in allowed:
-            return Response({'detail': 'forbidden'}, status=403)
-
         qs = _visits_for_user(user)
+
+        company = request.query_params.get('company', '').lower()
+        if company in User.Company.values:
+            qs = qs.filter(technician__company=company)
+
         by_status = {s: qs.filter(status=s).count() for s in Visit.Status.values}
         avg_duration = _avg_work_duration_minutes(qs)
 
@@ -63,33 +62,24 @@ class StatsView(APIView):
             'top_techs':    top_techs,
         }
 
-        if user.role in (User.Role.SUPER_MANAGER, User.Role.VIEWER):
-            stats['by_company'] = {
-                c: qs.filter(technician__company=c).count()
-                for c in User.Company.values
-            }
+        stats['by_company'] = {
+            c: qs.filter(technician__company=c).count()
+            for c in User.Company.values
+        }
 
         return Response(stats)
 
 
 class MapDataView(APIView):
     authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsDashboardConsumer]
 
     def get(self, request, version=None):
         user = request.user
-        allowed = (User.Role.MANAGER, User.Role.SUPER_MANAGER, User.Role.VIEWER)
-        if user.role not in allowed:
-            return Response({'detail': 'forbidden'}, status=403)
-
         qs = _visits_for_user(user)
 
-        # Empresa: solo super_manager/viewer pueden filtrar; MANAGER queda forzado a la suya
         company = request.query_params.get('company', 'all')
-        if user.role == User.Role.MANAGER:
-            company = user.company
-            qs = qs.filter(site__company=company)
-        elif company and company != 'all':
+        if company and company != 'all':
             qs = qs.filter(site__company=company)
 
         # Estados (csv)
@@ -185,4 +175,22 @@ class MapDataView(APIView):
             for v in visits_qs
         ]
 
-        return Response({'sites': sites, 'visits': visits_out})
+        # Tracking points de todas las visitas filtradas
+        visit_ids = [v['id'] for v in visits_qs]
+        event_labels = dict(VisitTrackingPoint.Event.choices)
+        tracking_out = [
+            {
+                'id':            tp['id'],
+                'visit_id':      tp['visit_id'],
+                'event':         tp['event'],
+                'event_display': event_labels.get(tp['event'], tp['event']),
+                'lat':           tp['latitude'],
+                'lng':           tp['longitude'],
+                'timestamp':     tp['timestamp'].isoformat(),
+            }
+            for tp in VisitTrackingPoint.objects.filter(visit_id__in=visit_ids)
+                                                .values('id', 'visit_id', 'event', 'latitude', 'longitude', 'timestamp')
+                                                .order_by('timestamp')
+        ]
+
+        return Response({'sites': sites, 'visits': visits_out, 'tracking_points': tracking_out})

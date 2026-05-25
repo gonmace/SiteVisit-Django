@@ -25,21 +25,37 @@
         </div>
         <!-- Estado -->
         <div class="shrink-0">
-          {% if visit.status == 'completada' %}
+          {% if tab == 'cancelados' %}
+          <div class="flex flex-col items-end gap-0.5">
+            <span class="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium {% if visit.status == 'cancelada' %}bg-error/15 text-error{% else %}text-base-content/20{% endif %}">Cancelado</span>
+            <span class="inline-block rounded-full px-2.5 py-0.5 text-[10px] font-medium {% if visit.status == 'rechazada' %}bg-error/15 text-error{% else %}text-base-content/20{% endif %}">Rechazado</span>
+          </div>
+          {% elif visit.status == 'completada' %}
           <div class="indicator">
-            {% if visit.photos.count %}
-            <span class="indicator-item badge badge-xs font-mono font-bold bg-white text-gray-800" style="border-color:rgba(0,0,0,0.35)">{{ visit.photos.count }}</span>
-            {% endif %}
+            {% with cnt=visit.photos.all|length %}{% if cnt %}
+            <span class="indicator-item badge badge-xs font-mono font-bold bg-white text-gray-800" style="border-color:rgba(0,0,0,0.35)">{{ cnt }}</span>
+            {% endif %}{% endwith %}
             <span class="badge badge-outline badge-success badge-sm font-medium">{{ visit.get_status_display }}</span>
           </div>
           {% else %}
-          <span class="badge badge-outline badge-sm font-medium
-            {% if visit.status == 'programada' %}badge-info
-            {% elif visit.status == 'en_camino' or visit.status == 'llegada' or visit.status == 'trabajando' %}badge-warning
-            {% elif visit.status == 'cancelada' or visit.status == 'rechazada' %}badge-error
-            {% else %}badge-ghost{% endif %}">
-            {{ visit.get_status_display }}
-          </span>
+          <div class="flex flex-col items-end gap-0.5">
+            {% with cnt=visit.photos.all|length %}
+            <div class="indicator">
+              {% if cnt %}<span class="indicator-item badge badge-xs font-mono font-bold bg-white text-gray-800" style="border-color:rgba(0,0,0,0.35)">{{ cnt }}</span>{% endif %}
+              <span class="badge badge-outline badge-sm font-medium
+                {% if visit.status == 'programada' %}badge-info
+                {% elif visit.status == 'en_camino' or visit.status == 'llegada' or visit.status == 'trabajando' %}badge-warning
+                {% elif visit.status == 'cancelada' or visit.status == 'rechazada' %}badge-error
+                {% else %}badge-ghost{% endif %}">
+                {{ visit.get_status_display }}
+              </span>
+            </div>
+            {% endwith %}
+            {% if visit.status == 'en_camino' %}<span class="text-[10px] text-info font-mono">2/5</span>
+            {% elif visit.status == 'llegada' %}<span class="text-[10px] text-info font-mono">3/5</span>
+            {% elif visit.status == 'trabajando' %}<span class="text-[10px] text-info font-mono">4/5</span>
+            {% endif %}
+          </div>
           {% endif %}
         </div>
       </div>
@@ -58,37 +74,125 @@
     <p class="text-xs text-base-content">{{ visit.reason }}</p>
     {% endif %}
     {% if tab == 'cancelados' %}
-    {% with motivo=visit.notas|default:visit.rejection_reason %}
-    {% if motivo %}
-    <p class="text-xs text-error/70">{{ motivo }}</p>
+      {% if visit.status == 'cancelada' %}
+        {% if visit.cancellation_reason %}
+        <p class="text-xs text-error/70">{{ visit.cancellation_reason }}</p>
+        {% endif %}
+        <div class="flex flex-wrap items-center gap-2 mt-1">
+          {% if visit.cancelled_by %}
+          <span class="text-xs text-base-content/40">
+            <i class="fa-solid fa-user-xmark text-[10px]"></i>
+            {{ visit.cancelled_by.get_full_name|default:visit.cancelled_by.email }}
+            {% if visit.cancelled_at %}· {{ visit.cancelled_at|date:"d/m/Y H:i" }}{% endif %}
+          </span>
+          {% endif %}
+          {% if visit.status_before_cancellation %}
+          <span class="badge badge-xs badge-ghost text-base-content/40">
+            Desde: {{ visit.status_before_cancellation|status_display }}
+          </span>
+          {% endif %}
+          {% if visit.hora_inicio_trabajos %}
+          <span class="badge badge-xs badge-warning text-warning-content" title="El técnico inició trabajos en campo">
+            <i class="fa-solid fa-wrench text-[9px]"></i> Iniciada
+          </span>
+          {% endif %}
+        </div>
+      {% else %}
+        {% if visit.rejection_reason %}
+        <p class="text-xs text-error/70">{{ visit.rejection_reason }}</p>
+        {% endif %}
+        <div class="flex flex-wrap items-center gap-2 mt-1">
+          {% if visit.rejected_by %}
+          <span class="text-xs text-base-content/40">
+            <i class="fa-solid fa-user-xmark text-[10px]"></i>
+            {{ visit.rejected_by.get_full_name|default:visit.rejected_by.email }}
+            {% if visit.rejected_at %}· {{ visit.rejected_at|date:"d/m/Y H:i" }}{% endif %}
+          </span>
+          {% endif %}
+        </div>
+      {% endif %}
     {% endif %}
-    {% endwith %}
-    {% endif %}
-    <div class="flex items-center justify-between">
-      <span class="text-xs text-base-content/50">{{ visit.scheduled_date|date:"d-m-Y" }}</span>
+    <div class="flex items-center justify-between mt-1.5">
+      <span class="text-xs text-base-content/60">{{ visit.scheduled_date|date:"d-m-Y" }}</span>
       {% if tab == 'cancelados' %}
-        {% if request.user.role == 'super_manager' %}
+      <div class="flex items-center gap-1.5">
+        {% if visit.hora_inicio_trabajos or visit.status_before_cancellation == 'en_camino' or visit.status_before_cancellation == 'llegada' or visit.status_before_cancellation == 'trabajando' %}
+        <a href="{% url 'manager:visit_detail' pk=visit.pk %}"
+           class="btn btn-circle btn-sm btn-view" title="Ver detalle">
+          <i class="fa-solid fa-eye text-xs"></i>
+        </a>
+        {% endif %}
+        {% if request.user.role == 'super_manager' or request.user.is_superuser %}
         <button type="button"
-                class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+                class="btn btn-circle btn-sm btn-delete" title="Eliminar"
                 data-url="{% url 'manager:visit_delete' pk=visit.pk %}"
                 data-name="{{ visit.technician.get_full_name|default:visit.technician.email }} — {{ visit.site.code }}"
                 onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('[data-row]'),'servicio','Esta acción es irreversible y eliminará el registro permanentemente.')">
           <i class="fa-solid fa-trash-can text-xs"></i>
         </button>
         {% endif %}
+      </div>
       {% else %}
-      <a href="{% url 'manager:visit_detail' pk=visit.pk %}"
-         class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity" title="Ver detalle">
-        <i class="fa-solid fa-eye text-xs"></i>
-      </a>
+      <div class="flex items-center gap-1.5">
+        <a href="{% url 'manager:visit_detail' pk=visit.pk %}"
+           class="btn btn-circle btn-sm btn-view" title="Ver detalle">
+          <i class="fa-solid fa-eye text-xs"></i>
+        </a>
+        {% if tab != 'concluidos' %}
+        <button type="button" onclick="document.getElementById('cancel-generic-{{ visit.pk }}').showModal()"
+                class="btn btn-circle btn-sm btn-delete" title="Cancelar servicio">
+          <i class="fa-solid fa-ban text-xs"></i>
+        </button>
+        {% endif %}
+      </div>
       {% endif %}
     </div>
   </div>
 </div>
 {% endfor %}
 
+<!-- Modales de cancelación (tabs activos, excluye concluidos) -->
+{% if tab != 'cancelados' and tab != 'concluidos' %}
+{% for visit in visits %}
+<dialog id="cancel-generic-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box shadow-xl">
+    <h3 class="font-bold text-base text-base-content">Cancelar servicio</h3>
+    <p class="text-sm text-base-content/50 mt-1 mb-1">
+      Servicio para <strong class="text-base-content">{{ visit.technician.get_full_name }}</strong>
+      en <strong class="text-base-content">{{ visit.site.code }}</strong>
+      — {{ visit.scheduled_date|date:"d/m/Y" }}.
+    </p>
+    {% if visit.status != 'programada' and visit.status != 'pendiente_aprobacion' %}
+    <p class="text-xs text-warning mb-3">
+      <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+      El técnico está actualmente <strong>{{ visit.get_status_display }}</strong>. Al cancelar quedará registrada la trazabilidad del trabajo realizado.
+    </p>
+    {% endif %}
+    <form method="post" action="{% url 'manager:visit_cancel' pk=visit.pk %}"
+          onsubmit="var b=this.querySelector('[type=submit]');b.disabled=true;b.innerHTML='<span class=\'loading loading-spinner loading-xs\'></span>'">
+      {% csrf_token %}
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
+          Motivo de cancelación *
+        </label>
+        <textarea name="cancellation_reason" required minlength="12" rows="3"
+                  placeholder="Indica el motivo por el que se cancela este servicio…"
+                  class="textarea textarea-bordered w-full text-sm resize-none"></textarea>
+      </div>
+      <div class="modal-action">
+        <button type="button" onclick="this.closest('dialog').close()"
+                class="btn btn-ghost btn-sm text-base-content/50">Volver</button>
+        <button type="submit" class="btn btn-delete btn-sm">Cancelar servicio</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+{% endfor %}
+{% endif %}
+
 <!-- Modales de eliminación de este batch (solo tab cancelados, super_manager) -->
-{% if tab == 'cancelados' and request.user.role == 'super_manager' %}
+{% if tab == 'cancelados' and request.user.role == 'super_manager' or tab == 'cancelados' and request.user.is_superuser %}
 {% for visit in visits %}
 <dialog id="delete-visit-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
   <div class="modal-box shadow-xl">

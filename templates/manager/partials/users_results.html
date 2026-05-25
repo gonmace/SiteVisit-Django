@@ -23,7 +23,8 @@
         <div class="flex items-center justify-between gap-2">
           <p class="text-sm font-semibold text-base-content truncate">{{ user.get_full_name|default:"—" }}</p>
           <div class="flex items-center gap-0.5 shrink-0">
-            <button type="button" class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity"
+            {% if user.role == 'technician' %}
+            <button type="button" class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-view hover:opacity-70 transition-opacity"
                     onclick="showTechnicianModal(this)"
                     data-name="{{ user.get_full_name|default:'—'|escape }}"
                     data-email="{{ user.email|escape }}"
@@ -47,19 +48,33 @@
                     title="Ver información">
               <i class="fa-solid fa-eye text-xs"></i>
             </button>
+            {% endif %}
             {% if is_manager %}
             <button type="button" data-url="{% url 'manager:technician_edit' user.pk %}"
-               onclick="openModalEdit(this.dataset.url,'tech-modal')"
-               class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+               onclick="openModalEdit(this.dataset.url,'tech-modal','edit-tpl-{{ user.pk }}')"
+               class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-edit hover:opacity-70 transition-opacity" title="Editar">
               <i class="fa-solid fa-pen text-xs"></i>
             </button>
             <button type="button"
-              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-delete hover:opacity-70 transition-opacity" title="Eliminar"
               data-url="{% url 'manager:technician_delete' user.pk %}"
               data-name="{{ user.get_full_name|default:user.email }}"
               onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('[data-row]'),'técnico','Se eliminará también el dispositivo asociado. Esta acción no se puede deshacer.')">
               <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
+            <a href="{% url 'manager:photos:gallery' %}?tech={{ user.pk }}"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-info hover:opacity-70 transition-opacity" title="Ver fotos">
+              <i class="fa-solid fa-images text-xs"></i>
+            </a>
+            {% if user.role == 'technician' %}{% if request.user.role == 'super_manager' or request.user.is_superuser %}{% if user.device %}
+            <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-warning hover:opacity-70 transition-opacity" title="Resetear dispositivo"
+              data-url="{% url 'manager:technician_reset_device' user.pk %}"
+              data-name="{{ user.get_full_name|default:user.email }}"
+              onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('[data-row]'),'dispositivo de','El técnico quedará inactivo y deberá registrarse desde su nuevo celular.')">
+              <i class="fa-solid fa-mobile-screen-button text-xs"></i>
+            </button>
+            {% endif %}{% endif %}{% endif %}
             {% endif %}
           </div>
         </div>
@@ -73,15 +88,17 @@
               <p class="text-xs text-accent font-medium mt-0.5">{{ user.phone }}</p>
             {% endif %}
           </div>
-          {% if user.device %}
+          {% if user.role == 'technician' %}
+            {% if user.device %}
             <div class="text-right shrink-0">
               <p class="text-xs font-medium text-base-content">{{ user.device.manufacturer }} {{ user.device.model }}</p>
               {% if user.device.android_id %}
                 <p class="text-[10px] text-base-content/40 font-mono">ID {{ user.device.android_id|slice:":8" }}…</p>
               {% endif %}
             </div>
-          {% else %}
+            {% else %}
             <span class="text-xs text-base-content/25 shrink-0">Sin dispositivo</span>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -95,13 +112,13 @@
         <div class="flex w-full rounded-full border border-base-300 overflow-hidden text-[10px] font-medium">
           <button type="button" name="status" value="pending"
                   onclick="confirmStatusChange(this,'Pendiente','El técnico no podrá acceder hasta ser activado.','btn-warning')"
-                  class="flex-1 py-1 text-center transition-colors {% if user.status == 1 %}bg-warning/15 text-warning{% else %}text-base-content/25{% endif %}">Pendiente</button>
+                  class="flex-1 py-1 text-center transition-colors cursor-pointer hover:bg-warning/10 hover:text-warning {% if user.status == 1 %}bg-warning/15 text-warning{% else %}text-base-content/25{% endif %}">Pendiente</button>
           <button type="button" name="status" value="active"
                   onclick="confirmStatusChange(this,'Activo','El técnico podrá iniciar sesión y registrar visitas.','btn-success')"
-                  class="flex-1 py-1 text-center border-x border-base-300 transition-colors {% if user.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
+                  class="flex-1 py-1 text-center border-x border-base-300 transition-colors cursor-pointer hover:bg-success/10 hover:text-success {% if user.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
           <button type="button" name="status" value="inactive"
                   onclick="confirmStatusChange(this,'Inactivo','El técnico perderá el acceso de inmediato.','btn-error')"
-                  class="flex-1 py-1 text-center transition-colors {% if user.status != 1 and user.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
+                  class="flex-1 py-1 text-center transition-colors cursor-pointer hover:bg-error/10 hover:text-error {% if user.status != 1 and user.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
         </div>
       </form>
       {% endif %}
@@ -159,16 +176,20 @@
             {{ user.rut|default:"—" }}
           </td>
           <td class="py-3.5 max-w-0 min-w-[6rem]">
-            {% if user.device %}
+            {% if user.role == 'technician' %}
+              {% if user.device %}
               <p class="text-xs font-medium text-base-content truncate">{{ user.device.manufacturer }} {{ user.device.model }}</p>
               {% if user.device.android_id %}
               <p class="text-xs text-base-content/40 mt-0.5 font-mono truncate">{{ user.device.android_id|slice:":8" }}…</p>
               {% endif %}
-            {% else %}
+              {% else %}
               <p class="text-xs text-base-content/30">Sin dispositivo</p>
+              {% endif %}
             {% endif %}
             {% if user.phone %}
               <p class="text-xs text-accent mt-0.5 truncate">{{ user.phone }}</p>
+            {% else %}
+              {% if user.role != 'technician' %}<span class="text-xs text-base-content/30">—</span>{% endif %}
             {% endif %}
           </td>
           <td class="py-3.5 text-center whitespace-nowrap">
@@ -176,12 +197,15 @@
             <form method="post" action="{% url 'manager:technician_toggle' user.pk %}" class="inline-block">
               {% csrf_token %}
               <div class="flex w-full rounded-full border border-base-300 overflow-hidden text-[10px] font-medium">
-                <button type="submit" name="status" value="pending"
-                        class="px-2.5 py-0.5 transition-colors {% if user.status == 1 %}bg-warning/15 text-warning{% else %}text-base-content/25{% endif %}">Pendiente</button>
-                <button type="submit" name="status" value="active"
-                        class="px-2.5 py-0.5 border-x border-base-300 transition-colors {% if user.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
-                <button type="submit" name="status" value="inactive"
-                        class="px-2.5 py-0.5 transition-colors {% if user.status != 1 and user.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
+                <button type="button" name="status" value="pending"
+                        onclick="confirmStatusChange(this,'Pendiente','El técnico no podrá acceder hasta ser activado.','btn-warning')"
+                        class="px-2.5 py-0.5 transition-colors cursor-pointer hover:bg-warning/10 hover:text-warning {% if user.status == 1 %}bg-warning/15 text-warning{% else %}text-base-content/25{% endif %}">Pendiente</button>
+                <button type="button" name="status" value="active"
+                        onclick="confirmStatusChange(this,'Activo','El técnico podrá iniciar sesión y registrar visitas.','btn-success')"
+                        class="px-2.5 py-0.5 border-x border-base-300 transition-colors cursor-pointer hover:bg-success/10 hover:text-success {% if user.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
+                <button type="button" name="status" value="inactive"
+                        onclick="confirmStatusChange(this,'Inactivo','El técnico perderá el acceso de inmediato.','btn-error')"
+                        class="px-2.5 py-0.5 transition-colors cursor-pointer hover:bg-error/10 hover:text-error {% if user.status != 1 and user.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
               </div>
             </form>
             {% else %}
@@ -196,7 +220,8 @@
           </td>
           {% if is_manager %}
           <td class="py-3.5 text-center whitespace-nowrap">
-            <button type="button" class="inline-flex items-center justify-center w-7 h-7 text-view hover:opacity-70 transition-opacity"
+            {% if user.role == 'technician' %}
+            <button type="button" class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-view hover:opacity-70 transition-opacity"
                     onclick="showTechnicianModal(this)"
                     data-name="{{ user.get_full_name|default:'—'|escape }}"
                     data-email="{{ user.email|escape }}"
@@ -220,18 +245,32 @@
                     title="Ver información">
               <i class="fa-solid fa-eye"></i>
             </button>
+            {% endif %}
             <button type="button" data-url="{% url 'manager:technician_edit' user.pk %}"
-               onclick="openModalEdit(this.dataset.url,'tech-modal')"
-               class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+               onclick="openModalEdit(this.dataset.url,'tech-modal','edit-tpl-{{ user.pk }}')"
+               class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-edit hover:opacity-70 transition-opacity" title="Editar">
               <i class="fa-solid fa-pen"></i>
             </button>
             <button type="button"
-              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-delete hover:opacity-70 transition-opacity" title="Eliminar"
               data-url="{% url 'manager:technician_delete' user.pk %}"
               data-name="{{ user.get_full_name|default:user.email }}"
               onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('tr'),'técnico','Se eliminará también el dispositivo asociado. Esta acción no se puede deshacer.')">
               <i class="fa-solid fa-trash-can"></i>
             </button>
+            <a href="{% url 'manager:photos:gallery' %}?tech={{ user.pk }}"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-info hover:opacity-70 transition-opacity" title="Ver fotos">
+              <i class="fa-solid fa-images"></i>
+            </a>
+            {% if user.role == 'technician' %}{% if request.user.role == 'super_manager' or request.user.is_superuser %}{% if user.device %}
+            <button type="button"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-warning hover:opacity-70 transition-opacity" title="Resetear dispositivo"
+              data-url="{% url 'manager:technician_reset_device' user.pk %}"
+              data-name="{{ user.get_full_name|default:user.email }}"
+              onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('tr'),'dispositivo de','El técnico quedará inactivo y deberá registrarse desde su nuevo celular.')">
+              <i class="fa-solid fa-mobile-screen-button"></i>
+            </button>
+            {% endif %}{% endif %}{% endif %}
           </td>
           {% endif %}
         </tr>
@@ -240,6 +279,10 @@
     </table>
   </div>
 </div>
+
+{% if is_manager %}
+{% for user in users %}<template id="edit-tpl-{{ user.pk }}">{% include "manager/technician_form_modal.html" with form=user.edit_form tech=user %}</template>{% endfor %}
+{% endif %}
 
 {% if page_obj.has_other_pages %}
 <div class="flex justify-center items-center mt-6 gap-2">

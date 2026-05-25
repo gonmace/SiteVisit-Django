@@ -16,8 +16,8 @@
           <p class="text-sm font-semibold text-base-content truncate">{{ visit.technician.get_full_name|default:"—" }}</p>
           <p class="text-xs text-base-content/40 truncate mt-0.5">{{ visit.technician.email }}</p>
         </div>
-        <div class="flex items-center gap-1 shrink-0">
-          {% if request.user.role == 'super_manager' %}
+        <div class="flex items-center gap-1.5 shrink-0">
+          {% if request.user.role == 'super_manager' or request.user.is_superuser %}
           <form method="post" action="{% url 'manager:visit_approve' pk=visit.pk %}">
             {% csrf_token %}
             <button type="button" onclick="confirmVisitAction(this,'aprobar','{{ visit.technician.get_full_name|default:visit.technician.email }}','{{ visit.site.code }}')"
@@ -26,13 +26,11 @@
           <button type="button" onclick="confirmVisitAction(this,'rechazar','{{ visit.technician.get_full_name|default:visit.technician.email }}','{{ visit.site.code }}','reject-visit-{{ visit.pk }}')"
                   class="btn btn-ghost btn-xs h-7 min-h-0 px-2.5 text-error">Rechazar</button>
           {% else %}
-          <a href="{% url 'manager:visit_edit' pk=visit.pk %}"
-             class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+          <button type="button"
+                  data-url="{% url 'manager:visit_edit' pk=visit.pk %}"
+                  onclick="openVisitEditModal(this.dataset.url)"
+                  class="btn btn-circle btn-sm btn-edit" title="Editar">
             <i class="fa-solid fa-pen text-xs"></i>
-          </a>
-          <button onclick="document.getElementById('cancel-visit-{{ visit.pk }}').showModal()"
-                  class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Cancelar">
-            <i class="fa-solid fa-xmark text-xs"></i>
           </button>
           {% endif %}
         </div>
@@ -68,39 +66,7 @@
 </div>
 {% endfor %}
 
-<!-- Modales de este batch (cancel + reject) -->
-{% if request.user.role != 'super_manager' %}
-{% for visit in visits %}
-<dialog id="cancel-visit-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
-  <div class="modal-box shadow-xl">
-    <h3 class="font-bold text-base text-base-content">Cancelar servicio</h3>
-    <p class="text-sm text-base-content/50 mt-1 mb-4">
-      Servicio para <strong class="text-base-content">{{ visit.technician.get_full_name }}</strong>
-      en <strong class="text-base-content">{{ visit.site.code }}</strong>
-      — {{ visit.scheduled_date|date:"d/m/Y" }}.
-    </p>
-    <form method="post" action="{% url 'manager:visit_cancel' pk=visit.pk %}">
-      {% csrf_token %}
-      <div class="mb-4">
-        <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
-          Motivo de cancelación *
-        </label>
-        <textarea name="cancellation_reason" required minlength="3" rows="3"
-                  placeholder="Indica el motivo por el que se cancela este servicio…"
-                  class="textarea textarea-bordered w-full text-sm resize-none"></textarea>
-      </div>
-      <div class="modal-action">
-        <button type="button" onclick="this.closest('dialog').close()"
-                class="btn btn-ghost btn-sm text-base-content/50">Volver</button>
-        <button type="submit" class="btn btn-delete btn-sm">Cancelar servicio</button>
-      </div>
-    </form>
-  </div>
-  <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
-{% endfor %}
-{% endif %}
-
+<!-- Modales de este batch (reject) -->
 {% for visit in visits %}
 <dialog id="reject-visit-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
   <div class="modal-box shadow-xl">

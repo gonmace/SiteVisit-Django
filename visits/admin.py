@@ -22,8 +22,9 @@ class VisitAdmin(admin.ModelAdmin):
     list_display    = ['id', 'coordinator', 'technician', 'site', 'status', 'scheduled_date', 'created_at']
     list_filter     = ['status', 'site__company', 'scheduled_date']
     search_fields   = ['technician__email', 'coordinator__email', 'site__code', 'site__name']
-    raw_id_fields   = ['technician', 'site', 'coordinator', 'approved_by', 'rejected_by']
-    readonly_fields = ['created_at', 'hora_inicio_trabajos', 'hora_fin_trabajos', 'approved_at', 'rejected_at']
+    raw_id_fields   = ['technician', 'site', 'coordinator', 'approved_by', 'rejected_by', 'cancelled_by']
+    readonly_fields = ['created_at', 'hora_inicio_trabajos', 'hora_fin_trabajos',
+                       'approved_at', 'rejected_at', 'cancelled_at']
     inlines         = [VisitPhotoInline, TrackingPointInline]
 
 

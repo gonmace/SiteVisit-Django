@@ -31,7 +31,7 @@
           <div class="flex items-center justify-between h-14">
 
             <!-- Brand -->
-            <a href="{% if request.user.role == 'super_manager' %}{% url 'manager:dashboard' %}{% else %}{% url 'manager:visits_approval' %}{% endif %}" class="flex items-center gap-2 shrink-0">
+            <a href="{% if request.user.role == 'super_manager' or request.user.is_superuser %}{% url 'manager:dashboard' %}{% else %}{% url 'manager:visits_approval' %}{% endif %}" class="flex items-center gap-2 shrink-0">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 175 105" class="h-7 w-auto text-primary" fill="currentColor">
                 <g transform="translate(0, 100) scale(0.104)">
                   <path d="M196-276q-57-60-86.5-133T80-560q0-78 29.5-151T196-844l48 48q-48 48-72 110.5T148-560q0 63 24 125.5T244-324l-48 48Zm96-96q-39-39-59.5-88T212-560q0-51 20.5-100t59.5-88l48 48q-30 27-45 64t-15 76q0 36 15 73t45 67l-48 48ZM280-80l135-405q-16-14-25.5-33t-9.5-42q0-42 29-71t71-29q42 0 71 29t29 71q0 23-9.5 42T545-485L680-80h-80l-26-80H387l-27 80h-80Zm133-160h134l-67-200-67 200Zm255-132-48-48q30-27 45-64t15-76q0-36-15-73t-45-67l48-48q39 39 58 88t22 100q0 51-20.5 100T668-372Zm96 96-48-48q48-48 72-110.5T812-560q0-63-24-125.5T716-796l48-48q57 60 86.5 133T880-560q0 78-28 151t-88 133Z"/>
@@ -46,7 +46,7 @@
             <!-- Nav links (desktop) -->
             <nav class="hidden md:flex items-center gap-0.5">
               {% with url_name=request.resolver_match.url_name %}
-              {% if request.user.role == 'super_manager' %}
+              {% if request.user.role == 'super_manager' or request.user.is_superuser %}
               <a href="{% url 'manager:dashboard' %}"
                  class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
                         {% if url_name == 'dashboard' %}bg-primary/8 text-primary{% else %}text-base-content/50 hover:text-base-content hover:bg-base-200{% endif %}">
@@ -57,16 +57,28 @@
                  class="relative px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
                         {% if url_name == 'visits_approval' or url_name == 'visit_detail' or url_name == 'visit_create' %}bg-primary/8 text-primary{% else %}text-base-content/50 hover:text-base-content hover:bg-base-200{% endif %}">
                 Servicios
-                {% if request.user.role == 'super_manager' and pending_visits_count %}
+                {% if request.user.role == 'super_manager' or request.user.is_superuser %}{% if pending_visits_count %}
                   <span class="ml-1 badge badge-neutral badge-xs font-bold">{{ pending_visits_count }}</span>
-                {% endif %}
+                {% endif %}{% endif %}
               </a>
               <a href="{% url 'manager:sites_list' %}"
                  class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
                         {% if url_name == 'sites_list' or url_name == 'site_create' or url_name == 'site_edit' or url_name == 'site_delete' or url_name == 'site_import' %}bg-primary/8 text-primary{% else %}text-base-content/50 hover:text-base-content hover:bg-base-200{% endif %}">
                 Sitios
               </a>
-              {% if request.user.role == 'super_manager' %}
+              {% if request.user.is_superuser %}
+              <a href="{% url 'manager:managers_list' %}"
+                 class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
+                        {% if url_name == 'managers_list' or url_name == 'manager_create' or url_name == 'manager_edit' or url_name == 'manager_delete' %}bg-primary/8 text-primary{% else %}text-base-content/50 hover:text-base-content hover:bg-base-200{% endif %}">
+                Managers
+              </a>
+              <a href="{% url 'manager:app_release' %}"
+                 class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
+                        {% if url_name == 'app_release' %}bg-primary/8 text-primary{% else %}text-base-content/50 hover:text-base-content hover:bg-base-200{% endif %}">
+                <i class="fa-brands fa-android text-xs"></i> App
+              </a>
+              {% endif %}
+              {% if request.user.role == 'super_manager' or request.user.is_superuser %}
               <a href="{% url 'manager:coordinators_list' %}"
                  class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
                         {% if url_name == 'coordinators_list' or url_name == 'coordinator_create' or url_name == 'coordinator_edit' or url_name == 'coordinator_delete' %}bg-primary/8 text-primary{% else %}text-base-content/50 hover:text-base-content hover:bg-base-200{% endif %}">
@@ -77,7 +89,15 @@
                  class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
                         {% if url_name == 'users_list' or url_name == 'technician_create' or url_name == 'technician_edit' or url_name == 'technician_delete' or url_name == 'technician_import' %}bg-primary/8 text-primary{% else %}text-base-content/50 hover:text-base-content hover:bg-base-200{% endif %}">
                 Técnicos
+                {% if pending_technicians_count %}<span class="ml-1 badge badge-warning badge-xs font-bold">{{ pending_technicians_count }}</span>{% endif %}
               </a>
+              {% if request.user.role == 'super_manager' or request.user.is_superuser %}
+              <a href="{% url 'manager:photos:gallery' %}"
+                 class="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all duration-150
+                        {% if url_name == 'gallery' %}bg-primary/8 text-primary{% else %}text-base-content/50 hover:text-base-content hover:bg-base-200{% endif %}">
+                Galería
+              </a>
+              {% endif %}
               {% endwith %}
             </nav>
 
@@ -88,7 +108,7 @@
                   {{ request.user.get_full_name|default:request.user.email }}
                 </span>
                 <span class="text-[10px] text-base-content/70 truncate leading-tight">
-                  {{ request.user.get_role_display }}
+                  {% if request.user.is_superuser %}Superusuario{% else %}{{ request.user.get_role_display }}{% endif %}
                 </span>
               </div>
 
@@ -109,6 +129,17 @@
                 </svg>
               </label>
 
+
+              <!-- Logout (solo desktop) -->
+              <form method="post" action="{% url 'manager:logout' %}" class="hidden md:flex">
+                {% csrf_token %}
+                <button type="submit"
+                        class="btn btn-ghost btn-sm w-9 h-9 min-h-0 p-0 rounded-lg
+                               border border-base-300 text-base-content/50 hover:text-base-content"
+                        title="Cerrar sesión">
+                  <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                </button>
+              </form>
 
               <!-- Hamburger (solo mobile) -->
               <label for="mobile-drawer"
@@ -152,7 +183,7 @@
         <nav class="flex-1 p-3 overflow-y-auto">
           <ul class="menu menu-sm gap-0.5 p-0 w-full">
             {% with url_name=request.resolver_match.url_name %}
-            {% if request.user.role == 'super_manager' %}
+            {% if request.user.role == 'super_manager' or request.user.is_superuser %}
             <li>
               <a href="{% url 'manager:dashboard' %}"
                  class="rounded-lg font-semibold {% if url_name == 'dashboard' %}bg-primary/8 text-primary{% endif %}">
@@ -166,9 +197,9 @@
                  class="rounded-lg font-semibold {% if url_name == 'visits_approval' or url_name == 'visit_detail' or url_name == 'visit_create' %}bg-primary/8 text-primary{% endif %}">
                 <i class="fa-solid fa-briefcase w-4"></i>
                 Servicios
-                {% if request.user.role == 'super_manager' and pending_visits_count %}
+                {% if request.user.role == 'super_manager' or request.user.is_superuser %}{% if pending_visits_count %}
                   <span class="badge badge-xs font-bold ml-auto bg-base-100 text-base-content border-base-300">{{ pending_visits_count }}</span>
-                {% endif %}
+                {% endif %}{% endif %}
               </a>
             </li>
             <li>
@@ -178,7 +209,23 @@
                 Sitios
               </a>
             </li>
-            {% if request.user.role == 'super_manager' %}
+            {% if request.user.is_superuser %}
+            <li>
+              <a href="{% url 'manager:managers_list' %}"
+                 class="rounded-lg font-semibold {% if url_name == 'managers_list' or url_name == 'manager_create' or url_name == 'manager_edit' or url_name == 'manager_delete' %}bg-primary/8 text-primary{% endif %}">
+                <i class="fa-solid fa-user-shield w-4"></i>
+                Managers
+              </a>
+            </li>
+            <li>
+              <a href="{% url 'manager:app_release' %}"
+                 class="rounded-lg font-semibold {% if url_name == 'app_release' %}bg-primary/8 text-primary{% endif %}">
+                <i class="fa-brands fa-android w-4"></i>
+                App Android
+              </a>
+            </li>
+            {% endif %}
+            {% if request.user.role == 'super_manager' or request.user.is_superuser %}
             <li>
               <a href="{% url 'manager:coordinators_list' %}"
                  class="rounded-lg font-semibold {% if url_name == 'coordinators_list' or url_name == 'coordinator_create' or url_name == 'coordinator_edit' or url_name == 'coordinator_delete' %}bg-primary/8 text-primary{% endif %}">
@@ -192,8 +239,18 @@
                  class="rounded-lg font-semibold {% if url_name == 'users_list' or url_name == 'technician_create' or url_name == 'technician_edit' or url_name == 'technician_delete' or url_name == 'technician_import' %}bg-primary/8 text-primary{% endif %}">
                 <i class="fa-solid fa-helmet-safety w-4"></i>
                 Técnicos
+                {% if pending_technicians_count %}<span class="badge badge-warning badge-xs font-bold ml-auto">{{ pending_technicians_count }}</span>{% endif %}
               </a>
             </li>
+            {% if request.user.role == 'super_manager' or request.user.is_superuser %}
+            <li>
+              <a href="{% url 'manager:photos:gallery' %}"
+                 class="rounded-lg font-semibold {% if url_name == 'gallery' %}bg-primary/8 text-primary{% endif %}">
+                <i class="fa-solid fa-images w-4"></i>
+                Galería
+              </a>
+            </li>
+            {% endif %}
             {% endwith %}
           </ul>
         </nav>
@@ -205,14 +262,17 @@
               <p class="text-xs font-semibold text-base-content truncate">
                 {{ request.user.get_full_name|default:request.user.email }}
               </p>
-              <p class="text-[11px] text-base-content/50 mt-0.5">{{ request.user.get_role_display }}</p>
+              <p class="text-[11px] text-base-content/50 mt-0.5">{% if request.user.is_superuser %}Superusuario{% else %}{{ request.user.get_role_display }}{% endif %}</p>
             </div>
-            <a href="{% url 'manager:logout' %}"
-               class="btn btn-ghost btn-sm w-8 h-8 min-h-0 p-0 rounded-lg shrink-0
-                      text-base-content/40 hover:text-base-content"
-               title="Cerrar sesión">
-              <i class="fa-solid fa-right-from-bracket text-sm"></i>
-            </a>
+            <form method="post" action="{% url 'manager:logout' %}">
+              {% csrf_token %}
+              <button type="submit"
+                      class="btn btn-ghost btn-sm w-8 h-8 min-h-0 p-0 rounded-lg shrink-0
+                             text-base-content/40 hover:text-base-content"
+                      title="Cerrar sesión">
+                <i class="fa-solid fa-right-from-bracket text-sm"></i>
+              </button>
+            </form>
           </div>
         </div>
 
@@ -322,6 +382,32 @@
     }
   })();
   </script>
+
+  <!-- Spinner helpers globales -->
+  <script>
+  function _btnSpin(btn) {
+    if (!btn || btn.dataset.spinning) return;
+    btn.dataset.spinning = '1';
+    btn.dataset.origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+  }
+  function _btnRestore(btn) {
+    if (!btn || !btn.dataset.spinning) return;
+    btn.innerHTML = btn.dataset.origHtml || '';
+    btn.disabled = false;
+    delete btn.dataset.spinning;
+    delete btn.dataset.origHtml;
+  }
+  window._btnSpin    = _btnSpin;
+  window._btnRestore = _btnRestore;
+
+  // Auto-spinner en cualquier submit de formulario (no afecta form.submit() programático)
+  document.addEventListener('submit', function (e) {
+    var btn = e.target.querySelector('[type="submit"]:not([data-no-spin])');
+    if (btn && !btn.dataset.spinning) _btnSpin(btn);
+  }, true);
+  </script>
   {% if messages %}
   <script>
     (function () {
@@ -404,6 +490,7 @@
       btn.textContent = opts.confirmText || 'Confirmar';
       btn.className   = 'btn btn-sm h-9 min-h-0 px-5 text-xs font-semibold ' + (opts.confirmClass || t.btn);
       btn.onclick     = function () {
+        _btnSpin(btn);
         modal.close();
         if (opts.postUrl) {
           var f = document.getElementById('confirm-post-form');
@@ -447,16 +534,18 @@
         setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
       }
       el.querySelector('.js-cancel').onclick = dismiss;
-      el.querySelector('.js-confirm').onclick = function () {
-        dismiss();
+      el.querySelector('.js-confirm').onclick = function (e) {
+        var confirmBtn = e.currentTarget;
+        _btnSpin(confirmBtn);
         var csrf = document.querySelector('#confirm-post-form [name=csrfmiddlewaretoken]').value;
         fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrf } })
           .then(function (r) { return r.json(); })
           .then(function (d) {
+            dismiss();
             if (d.ok) { if (rowEl) rowEl.remove(); Alert.success(d.message); }
             else { Alert.error('No se pudo eliminar.'); }
           })
-          .catch(function () { Alert.error('Error al eliminar.'); });
+          .catch(function () { dismiss(); Alert.error('Error al eliminar.'); });
       };
     }
     window.deleteItem = deleteItem;
@@ -464,6 +553,8 @@
     function setupModalForm(url, form, modalId) {
       form.addEventListener('submit', function (e) {
         e.preventDefault();
+        var submitBtn = form.querySelector('[type="submit"]');
+        if (submitBtn) _btnSpin(submitBtn);
         fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: new FormData(form) })
           .then(function (r) {
             if (r.ok) { document.getElementById(modalId).close(); window.location.reload(); }
@@ -474,15 +565,28 @@
               });
             }
           })
-          .catch(function () { Alert.error('Error al guardar los cambios.'); });
+          .catch(function () { if (submitBtn) _btnRestore(submitBtn); Alert.error('Error al guardar los cambios.'); });
       });
     }
     window.setupModalForm = setupModalForm;
 
-    function openModalEdit(url, modalId) {
+    function openModalEdit(url, modalId, tplId) {
       var modal = document.getElementById(modalId);
       var title = document.getElementById(modalId + '-title');
       var body  = document.getElementById(modalId + '-body');
+
+      if (tplId) {
+        var tpl = document.getElementById(tplId);
+        if (tpl) {
+          title.textContent = 'Editar';
+          body.innerHTML = tpl.innerHTML;
+          modal.showModal();
+          var form = body.querySelector('form');
+          if (form) { var t = form.dataset.title; if (t) title.textContent = t; setupModalForm(url, form, modalId); }
+          return;
+        }
+      }
+
       body.innerHTML = '<div class="flex justify-center py-8"><span class="loading loading-spinner loading-md text-primary"></span></div>';
       title.textContent = 'Editar';
       modal.showModal();
@@ -496,6 +600,53 @@
         .catch(function () { body.innerHTML = '<p class="text-sm text-error">Error al cargar el formulario.</p>'; });
     }
     window.openModalEdit = openModalEdit;
+
+    function _setStatusLoading(form) {
+      var wrap = form.querySelector('div');
+      if (!wrap) return;
+      wrap.innerHTML = '<div class="flex items-center justify-center gap-1 px-3 py-0.5"><span class="loading loading-spinner loading-xs opacity-50"></span></div>';
+      wrap.style.pointerEvents = 'none';
+    }
+    window._setStatusLoading = _setStatusLoading;
+
+    function confirmStatusChange(btn, statusLabel, message, confirmClass) {
+      var form = btn.closest('form');
+      var value = btn.value;
+      var container = Alert._getContainer();
+      var el = document.createElement('div');
+      el.className = 'alert alert-warning';
+      el.style.cssText = 'opacity:0;transform:translateX(100%);transition:all .3s ease-in-out;flex-direction:column;align-items:flex-start;gap:8px;max-width:320px';
+      el.innerHTML =
+        '<div class="flex items-start gap-2">' +
+          '<i class="fa-solid fa-circle-question shrink-0 mt-0.5"></i>' +
+          '<div>' +
+            '<p class="text-sm font-semibold">Cambiar estado</p>' +
+            '<p class="text-xs opacity-70 mt-0.5">' + message + '</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="flex gap-2 self-end">' +
+          '<button class="btn btn-ghost btn-xs h-7 min-h-0 js-cancel">Cancelar</button>' +
+          '<button class="btn btn-xs h-7 min-h-0 js-confirm ' + (confirmClass || 'btn-success') + '">' + statusLabel + '</button>' +
+        '</div>';
+      container.appendChild(el);
+      setTimeout(function () { el.style.opacity = '1'; el.style.transform = 'translateX(0)'; }, 10);
+      function dismiss() {
+        el.style.opacity = '0'; el.style.transform = 'translateX(100%)';
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
+      }
+      el.querySelector('.js-cancel').onclick = dismiss;
+      el.querySelector('.js-confirm').onclick = function () {
+        dismiss();
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'status';
+        hidden.value = value;
+        form.appendChild(hidden);
+        _setStatusLoading(form);
+        form.submit();
+      };
+    }
+    window.confirmStatusChange = confirmStatusChange;
 
   </script>
 

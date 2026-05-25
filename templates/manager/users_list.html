@@ -7,7 +7,14 @@
 <!-- Header + search -->
 <div class="flex items-center justify-between gap-2 mb-6">
   <div class="shrink-0">
-    <h1 class="text-xl font-bold text-base-content tracking-tight">Técnicos</h1>
+    <div class="flex items-center gap-2.5">
+      <h1 class="text-xl font-bold text-base-content tracking-tight">Técnicos</h1>
+      <div class="flex items-center gap-1.5">
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-success/15 text-success text-[10px] font-bold" title="Activos">{{ count_active }}</span>
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-warning/15 text-warning text-[10px] font-bold" title="Pendientes">{{ count_pending }}</span>
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-error/15 text-error text-[10px] font-bold" title="Inactivos">{{ count_inactive }}</span>
+      </div>
+    </div>
     <p class="text-xs text-base-content/40 mt-0.5">{{ page_obj.paginator.count|intcomma }} técnico(s)</p>
   </div>
   <div class="flex items-center gap-2">
@@ -23,7 +30,7 @@
         </a>
       {% endif %}
     </form>
-    {% if request.user.role == 'super_manager' %}
+    {% if request.user.role == 'super_manager' or request.user.is_superuser %}
       <a href="{% url 'manager:technician_import' %}" class="hidden sm:inline-flex btn btn-secondary btn-sm h-9 min-h-0 text-xs">
         Importar Excel
       </a>
@@ -104,6 +111,7 @@
   </form>
 </dialog>
 
+
 <script>
 (function () {
   var input   = document.getElementById('users-search');
@@ -136,43 +144,6 @@
   });
 })();
 
-function confirmStatusChange(btn, statusLabel, message, confirmClass) {
-  var form = btn.closest('form');
-  var value = btn.value;
-  var container = Alert._getContainer();
-  var el = document.createElement('div');
-  el.className = 'alert alert-warning';
-  el.style.cssText = 'opacity:0;transform:translateX(100%);transition:all .3s ease-in-out;flex-direction:column;align-items:flex-start;gap:8px;max-width:320px';
-  el.innerHTML =
-    '<div class="flex items-start gap-2">' +
-      '<i class="fa-solid fa-circle-question shrink-0 mt-0.5"></i>' +
-      '<div>' +
-        '<p class="text-sm font-semibold">Cambiar estado</p>' +
-        '<p class="text-xs opacity-70 mt-0.5">' + message + '</p>' +
-      '</div>' +
-    '</div>' +
-    '<div class="flex gap-2 self-end">' +
-      '<button class="btn btn-ghost btn-xs h-7 min-h-0 js-cancel">Cancelar</button>' +
-      '<button class="btn btn-xs h-7 min-h-0 js-confirm ' + (confirmClass || 'btn-success') + '">' + statusLabel + '</button>' +
-    '</div>';
-  container.appendChild(el);
-  setTimeout(function () { el.style.opacity = '1'; el.style.transform = 'translateX(0)'; }, 10);
-  function dismiss() {
-    el.style.opacity = '0'; el.style.transform = 'translateX(100%)';
-    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 300);
-  }
-  el.querySelector('.js-cancel').onclick = dismiss;
-  el.querySelector('.js-confirm').onclick = function () {
-    dismiss();
-    var hidden = document.createElement('input');
-    hidden.type = 'hidden';
-    hidden.name = 'status';
-    hidden.value = value;
-    form.appendChild(hidden);
-    form.submit();
-  };
-}
-window.confirmStatusChange = confirmStatusChange;
 
 function showTechnicianModal(btn) {
   var d = btn.dataset;
@@ -234,6 +205,8 @@ function showTechnicianModal(btn) {
 
   m.showModal();
 }
+
+
 </script>
 
 {% endblock %}

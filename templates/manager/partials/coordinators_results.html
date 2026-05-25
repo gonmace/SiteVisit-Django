@@ -21,12 +21,12 @@
           <p class="text-sm font-semibold text-base-content truncate">{{ coord.get_full_name|default:"—" }}</p>
           <div class="flex items-center gap-0.5 shrink-0">
             <button type="button" data-url="{% url 'manager:coordinator_edit' coord.pk %}"
-               onclick="openModalEdit(this.dataset.url,'coord-modal')"
-               class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+               onclick="openModalEdit(this.dataset.url,'coord-modal','edit-tpl-coord-{{ coord.pk }}')"
+               class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-edit hover:opacity-70 transition-opacity" title="Editar">
               <i class="fa-solid fa-pen text-xs"></i>
             </button>
             <button type="button"
-              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-delete hover:opacity-70 transition-opacity" title="Eliminar"
               data-url="{% url 'manager:coordinator_delete' coord.pk %}"
               data-name="{{ coord.get_full_name|default:coord.email }}"
               onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('[data-row]'),'coordinador','Los registros históricos se mantendrán. Esta acción no se puede deshacer.')">
@@ -47,10 +47,10 @@
             <div class="flex rounded-full border border-base-300 overflow-hidden text-[10px] font-medium">
               <button type="button" name="status" value="active"
                       onclick="confirmStatusChange(this,'Activo','El coordinador podrá iniciar sesión.','btn-success')"
-                      class="px-2.5 py-1 transition-colors {% if coord.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
+                      class="px-2.5 py-1 transition-colors cursor-pointer hover:bg-success/10 hover:text-success {% if coord.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
               <button type="button" name="status" value="inactive"
                       onclick="confirmStatusChange(this,'Inactivo','El coordinador perderá el acceso de inmediato.','btn-error')"
-                      class="px-2.5 py-1 border-l border-base-300 transition-colors {% if coord.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
+                      class="px-2.5 py-1 border-l border-base-300 transition-colors cursor-pointer hover:bg-error/10 hover:text-error {% if coord.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
             </div>
           </form>
         </div>
@@ -109,21 +109,21 @@
               <div class="flex rounded-full border border-base-300 overflow-hidden text-[10px] font-medium">
                 <button type="button" name="status" value="active"
                         onclick="confirmStatusChange(this,'Activo','El coordinador podrá iniciar sesión.','btn-success')"
-                        class="px-2.5 py-0.5 transition-colors {% if coord.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
+                        class="px-2.5 py-0.5 transition-colors cursor-pointer hover:bg-success/10 hover:text-success {% if coord.status == 2 %}bg-success/15 text-success{% else %}text-base-content/25{% endif %}">Activo</button>
                 <button type="button" name="status" value="inactive"
                         onclick="confirmStatusChange(this,'Inactivo','El coordinador perderá el acceso de inmediato.','btn-error')"
-                        class="px-2.5 py-0.5 border-l border-base-300 transition-colors {% if coord.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
+                        class="px-2.5 py-0.5 border-l border-base-300 transition-colors cursor-pointer hover:bg-error/10 hover:text-error {% if coord.status != 2 %}bg-error/15 text-error{% else %}text-base-content/25{% endif %}">Inactivo</button>
               </div>
             </form>
           </td>
           <td class="py-3.5 text-center whitespace-nowrap">
             <button type="button" data-url="{% url 'manager:coordinator_edit' coord.pk %}"
-               onclick="openModalEdit(this.dataset.url,'coord-modal')"
-               class="inline-flex items-center justify-center w-7 h-7 text-edit hover:opacity-70 transition-opacity" title="Editar">
+               onclick="openModalEdit(this.dataset.url,'coord-modal','edit-tpl-coord-{{ coord.pk }}')"
+               class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-edit hover:opacity-70 transition-opacity" title="Editar">
               <i class="fa-solid fa-pen"></i>
             </button>
             <button type="button"
-              class="inline-flex items-center justify-center w-7 h-7 text-delete hover:opacity-70 transition-opacity" title="Eliminar"
+              class="inline-flex items-center justify-center w-7 h-7 cursor-pointer text-delete hover:opacity-70 transition-opacity" title="Eliminar"
               data-url="{% url 'manager:coordinator_delete' coord.pk %}"
               data-name="{{ coord.get_full_name|default:coord.email }}"
               onclick="deleteItem(this.dataset.url,this.dataset.name,this.closest('tr'),'coordinador','Los registros históricos se mantendrán. Esta acción no se puede deshacer.')">
@@ -136,6 +136,8 @@
     </table>
   </div>
 </div>
+
+{% for coord in coordinators %}<template id="edit-tpl-coord-{{ coord.pk }}">{% include "manager/coordinator_form_modal.html" with form=coord.edit_form coord=coord %}</template>{% endfor %}
 
 {% if page_obj.has_other_pages %}
 <div class="flex justify-center items-center mt-6 gap-2">

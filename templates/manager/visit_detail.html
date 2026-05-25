@@ -1,30 +1,33 @@
 {% extends "manager/base.html" %}
+{% load user_tags %}
 {% block title %}Visita #{{ visit_number }}{% endblock %}
 
 {% block extra_head %}
 {% if tracking_points_geo %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 {% endif %}
 {% endblock %}
 
 {% block content %}
 
 <!-- Back -->
-<div class="mb-5">
+<div class="mb-2">
   <a href="{% url 'manager:visits_approval' %}"
      onclick="if(history.length>1){event.preventDefault();history.back();}"
      class="inline-flex items-center gap-1.5 text-sm text-base-content/50 hover:text-primary transition-colors">
     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
       <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
     </svg>
-    Volver a visitas
+    Atrás
   </a>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-  <!-- Left column -->
-  <div class="lg:col-span-1 flex flex-col gap-4">
+  <!-- Info cards -->
+  <div class="order-1 lg:col-span-1 flex flex-col gap-4">
 
     <!-- Sitio card -->
     <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
@@ -46,6 +49,28 @@
           <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Nombre</span>
           <span class="text-sm text-base-content">{{ visit.site.name }}</span>
         </div>
+        {% if visit.site.comuna %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Comuna</span>
+          <span class="text-sm text-base-content">{{ visit.site.comuna }}</span>
+        </div>
+        {% endif %}
+        {% if visit.site.region %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Región</span>
+          <span class="text-sm text-base-content">{{ visit.site.region }}</span>
+        </div>
+        {% endif %}
+        {% if visit.site.latitude is not None and visit.site.longitude is not None %}
+        <div class="flex items-start gap-3 px-5 py-3">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Coordenadas</span>
+          <a href="https://www.google.com/maps/search/?api=1&query={{ visit.site.latitude|stringformat:'.6f' }},{{ visit.site.longitude|stringformat:'.6f' }}"
+             target="_blank"
+             class="text-xs font-mono text-info hover:underline">
+            {{ visit.site.latitude|stringformat:'.6f' }},{{ visit.site.longitude|stringformat:'.6f' }}
+          </a>
+        </div>
+        {% endif %}
       </div>
     </div><!-- /sitio card -->
 
@@ -59,12 +84,7 @@
           <h2 class="text-lg font-bold text-base-content tracking-tight">#{{ visit_number }}</h2>
         </div>
         {% if visit.status == 'completada' %}
-        <div class="indicator">
-          {% if visit.photos.count %}
-          <span class="indicator-item badge badge-xs badge-info font-mono font-bold !text-black">{{ visit.photos.count }}</span>
-          {% endif %}
-          <span class="badge badge-outline badge-success badge-md font-medium">{{ visit.get_status_display }}</span>
-        </div>
+        <span class="badge badge-outline badge-success badge-md font-medium">{{ visit.get_status_display }}</span>
         {% else %}
         <div class="inline-flex items-center gap-1">
           <span class="badge badge-outline badge-md font-medium
@@ -162,11 +182,31 @@
           </div>
         </div>
         {% endif %}
+        {% if visit.cancelled_at %}
+        <div class="flex items-start gap-3 px-5 py-3 bg-error/5">
+          <span class="text-xs font-medium text-base-content/40 w-24 shrink-0 pt-0.5">Cancelado por</span>
+          <div>
+            <p class="text-sm text-base-content">{{ visit.cancelled_by.get_full_name|default:visit.cancelled_by.email|default:"—" }}</p>
+            <p class="text-xs text-base-content/40 mt-0.5">{{ visit.cancelled_at|date:"d/m/Y H:i" }}</p>
+            {% if visit.status_before_cancellation %}
+            <p class="text-xs text-base-content/40 mt-0.5">Estado al cancelar: <span class="font-medium">{{ visit.status_before_cancellation|status_display }}</span></p>
+            {% endif %}
+            {% if visit.cancellation_reason %}
+            <p class="text-xs text-error mt-1">{{ visit.cancellation_reason }}</p>
+            {% endif %}
+            {% if visit.hora_inicio_trabajos %}
+            <span class="badge badge-xs badge-warning mt-1">
+              <i class="fa-solid fa-wrench text-[9px]"></i> Técnico inició trabajos en campo
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
 
       </div>
 
       <!-- Acciones de aprobación (solo super_manager + estado pendiente) -->
-      {% if visit.status == 'pendiente_aprobacion' and request.user.role == 'super_manager' %}
+      {% if visit.status == 'pendiente_aprobacion' and request.user.role == 'super_manager' or visit.status == 'pendiente_aprobacion' and request.user.is_superuser %}
       <div class="px-5 py-4 border-t border-base-200 flex items-center gap-2">
         <form method="post" action="{% url 'manager:visit_approve' pk=visit.pk %}">
           {% csrf_token %}
@@ -180,13 +220,26 @@
           <i class="fa-solid fa-xmark text-xs"></i>
           Rechazar
         </button>
+        <button onclick="document.getElementById('cancel-visit-detail-{{ visit.pk }}').showModal()"
+                class="btn btn-ghost btn-sm h-9 min-h-0 text-base-content/40 hover:bg-base-200">
+          <i class="fa-solid fa-ban text-xs"></i>
+          Cancelar
+        </button>
+      </div>
+      {% elif visit.status != 'completada' and visit.status != 'cancelada' and visit.status != 'rechazada' %}
+      <div class="px-5 py-4 border-t border-base-200">
+        <button onclick="document.getElementById('cancel-visit-detail-{{ visit.pk }}').showModal()"
+                class="btn btn-ghost btn-sm h-9 min-h-0 text-error hover:bg-error/8">
+          <i class="fa-solid fa-ban text-xs"></i>
+          Cancelar servicio
+        </button>
       </div>
       {% endif %}
 
     </div><!-- /visita card -->
 
     <!-- Modal de rechazo desde detalle -->
-    {% if visit.status == 'pendiente_aprobacion' and request.user.role == 'super_manager' %}
+    {% if visit.status == 'pendiente_aprobacion' and request.user.role == 'super_manager' or visit.status == 'pendiente_aprobacion' and request.user.is_superuser %}
     <dialog id="reject-visit-detail-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
       <div class="modal-box shadow-xl">
         <h3 class="font-bold text-base text-base-content">Rechazar servicio</h3>
@@ -218,120 +271,154 @@
     </dialog>
     {% endif %}
 
-    <!-- GPS Tracking -->
+    <!-- Modal de cancelación desde detalle (cualquier estado activo) -->
+    {% if visit.status != 'completada' and visit.status != 'cancelada' and visit.status != 'rechazada' %}
+    <dialog id="cancel-visit-detail-{{ visit.pk }}" class="modal modal-bottom sm:modal-middle">
+      <div class="modal-box shadow-xl">
+        <h3 class="font-bold text-base text-base-content">Cancelar servicio</h3>
+        <p class="text-sm text-base-content/50 mt-1 mb-1">
+          Servicio para <strong class="text-base-content">{{ visit.technician.get_full_name }}</strong>
+          en <strong class="text-base-content">{{ visit.site.code }}</strong>.
+        </p>
+        {% if visit.status != 'programada' and visit.status != 'pendiente_aprobacion' %}
+        <p class="text-xs text-warning mb-3">
+          <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+          El técnico está actualmente <strong>{{ visit.get_status_display }}</strong>. Al cancelar quedará registrada la trazabilidad del trabajo realizado.
+        </p>
+        {% endif %}
+        <form method="post" action="{% url 'manager:visit_cancel' pk=visit.pk %}"
+              onsubmit="var b=this.querySelector('[type=submit]');b.disabled=true;b.innerHTML='<span class=\'loading loading-spinner loading-xs\'></span>'">
+          {% csrf_token %}
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-base-content/50 uppercase tracking-wide mb-2">
+              Motivo de cancelación *
+            </label>
+            <textarea name="cancellation_reason"
+                      required
+                      minlength="12"
+                      rows="3"
+                      placeholder="Indica el motivo por el que se cancela este servicio…"
+                      class="textarea textarea-bordered w-full text-sm resize-none"></textarea>
+          </div>
+          <div class="modal-action">
+            <button type="button" onclick="this.closest('dialog').close()"
+                    class="btn btn-ghost btn-sm text-base-content/50">Volver</button>
+            <button type="submit" class="btn btn-delete btn-sm">Cancelar servicio</button>
+          </div>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+    {% endif %}
+
+  </div><!-- /info cards -->
+
+  <!-- Tracking GPS (mobile: orden 3 = debajo de imágenes; desktop: col 1 fila 2) -->
+  {% if visit.tracking_points.all %}
+  <div class="order-3 hidden lg:block lg:col-span-1 lg:col-start-1 lg:row-start-2">
     <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
       <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between">
         <h3 class="text-sm font-semibold text-base-content">Tracking GPS</h3>
         <span class="text-xs font-medium text-base-content/40">{{ visit.tracking_points.count }} evento(s)</span>
       </div>
       <div class="px-5 py-3">
-        {% if visit.tracking_points.all %}
         <div class="flex flex-col gap-0">
-          {% for pt in visit.tracking_points.all %}
+          {% for step in tracking_steps %}
           <div class="flex items-stretch gap-3">
 
             <!-- Tiempo (columna fija izquierda) -->
             <div class="w-10 shrink-0 flex flex-col items-end justify-start pt-2.5">
-              <p class="text-xs font-mono font-semibold text-base-content/70 leading-none">{{ pt.timestamp|date:"H:i" }}</p>
-              <p class="text-[9px] text-base-content/30 mt-0.5 leading-none">{{ pt.timestamp|date:"d/m" }}</p>
+              <p class="text-xs font-mono font-semibold text-base-content/70 leading-none">{{ step.timestamp|date:"H:i" }}</p>
+              <p class="text-[9px] text-base-content/30 mt-0.5 leading-none">{{ step.timestamp|date:"d/m" }}</p>
             </div>
 
             <!-- Conector vertical + icono -->
-            <div class="flex flex-col items-center shrink-0" style="width:20px">
-              <!-- Línea superior (oculta en el primero) -->
+            <div class="flex flex-col items-center shrink-0" style="width:25px">
               <div class="w-px flex-none {% if forloop.first %}invisible{% endif %} bg-base-300" style="height:10px"></div>
-              <!-- Icono del paso -->
-              <div class="w-5 h-5 rounded-full shrink-0 flex items-center justify-center
-                {% if pt.event == 'salida' %}bg-info/15
-                {% elif pt.event == 'llegada' %}bg-warning/15
-                {% elif pt.event == 'inicio' %}bg-success/15
-                {% elif pt.event == 'cierre' %}bg-delete/15
-                {% elif pt.event == 'finalizado' %}bg-primary/15
+              <div class="w-[25px] h-[25px] rounded-full shrink-0 flex items-center justify-center
+                {% if step.event == 'salida' %}bg-base-content/20
+                {% elif step.event == 'llegada' %}bg-warning
+                {% elif step.event == 'inicio' %}bg-info
+                {% elif step.event == 'cierre' %}bg-primary
+                {% elif step.event == 'finalizado' %}bg-success
                 {% else %}bg-base-300{% endif %}">
-                {% if pt.event == 'salida' %}<i class="fa-solid fa-car text-[8px] text-info"></i>
-                {% elif pt.event == 'llegada' %}<i class="fa-solid fa-location-dot text-[8px] text-warning"></i>
-                {% elif pt.event == 'inicio' %}<i class="fa-solid fa-wrench text-[8px] text-success"></i>
-                {% elif pt.event == 'cierre' %}<i class="fa-solid fa-flag-checkered text-[8px] text-primary"></i>
-                {% elif pt.event == 'finalizado' %}<i class="fa-solid fa-screwdriver-wrench text-[8px] text-delete"></i>
-                {% else %}<i class="fa-solid fa-circle text-[8px] text-base-content/30"></i>
+                {% if step.event == 'salida' %}<i class="fa-solid fa-car text-[10px] text-base-content/60"></i>
+                {% elif step.event == 'llegada' %}<i class="fa-solid fa-location-dot text-[10px] text-white"></i>
+                {% elif step.event == 'inicio' %}<i class="fa-solid fa-wrench text-[10px] text-white"></i>
+                {% elif step.event == 'cierre' %}<i class="fa-solid fa-flag-checkered text-[10px] text-white"></i>
+                {% elif step.event == 'finalizado' %}<i class="fa-solid fa-screwdriver-wrench text-[10px] text-white"></i>
+                {% else %}<i class="fa-solid fa-circle text-[10px] text-base-content/30"></i>
                 {% endif %}
               </div>
-              <!-- Línea inferior (oculta en el último) -->
               <div class="w-px flex-1 mt-1 {% if forloop.last %}invisible{% endif %} bg-base-300"></div>
             </div>
 
-            <!-- Card del evento (inmediatamente a la derecha de hora/fecha) -->
+            <!-- Card del evento -->
             <div class="flex-1 border border-base-200 rounded-xl px-3 py-2 mb-2.5 bg-base-50 self-start">
+              {% if step.elapsed %}<p class="text-[9px] text-accent font-mono tabular-nums leading-none mb-1 text-right">+{{ step.elapsed }}</p>{% endif %}
               <div class="flex items-center gap-1.5">
                 <p class="text-xs font-semibold text-base-content">
-                  {% if pt.event == 'salida' %}Movilización
-                  {% elif pt.event == 'llegada' %}Llegada
-                  {% elif pt.event == 'inicio' %}Inicio
-                  {% elif pt.event == 'cierre' %}Cierre
-                  {% elif pt.event == 'finalizado' %}Finalizado
-                  {% else %}{{ pt.get_event_display }}{% endif %}
+                  {% if step.event == 'salida' %}Movilización
+                  {% elif step.event == 'llegada' %}Llegada
+                  {% elif step.event == 'inicio' %}Inicio
+                  {% elif step.event == 'cierre' %}Cierre
+                  {% elif step.event == 'finalizado' %}Finalizado
+                  {% else %}{{ step.event_display }}{% endif %}
                 </p>
-                <span class="text-[9px] text-base-content/30 font-normal">— {{ pt.get_event_display }}</span>
+                <span class="text-[9px] text-base-content/30 font-normal">— {{ step.event_display }}</span>
               </div>
-              <a href="https://www.google.com/maps/search/?api=1&query={{ pt.latitude|stringformat:'.6f' }},{{ pt.longitude|stringformat:'.6f' }}"
+              <a href="https://www.google.com/maps/search/?api=1&query={{ step.latitude|stringformat:'.6f' }},{{ step.longitude|stringformat:'.6f' }}"
                  target="_blank"
-                 class="text-[10px] text-info hover:underline font-mono mt-0.5 block">
-                {{ pt.latitude|stringformat:".5f" }}, {{ pt.longitude|stringformat:".5f" }}
+                 class="text-[10px] text-info hover:underline font-mono mt-0.5 leading-tight block">
+                <span class="block">lat: {{ step.latitude|stringformat:".7f" }}</span>
+                <span class="block">lon: {{ step.longitude|stringformat:".7f" }}</span>
               </a>
             </div>
 
           </div>
           {% endfor %}
         </div>
-        {% else %}
-        <div class="flex flex-col items-center justify-center py-8 text-center">
-          <i class="fa-solid fa-location-crosshairs text-2xl text-base-content/15 mb-2"></i>
-          <p class="text-xs text-base-content/30">Sin eventos GPS registrados</p>
-        </div>
-        {% endif %}
       </div>
     </div>
+  </div><!-- /tracking wrapper -->
+  {% endif %}
 
-  </div><!-- /left column -->
-
-  <!-- Right column: photos -->
-  <div class="lg:col-span-2">
+  <!-- Images + map -->
+  <div class="order-2 lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+    {% if visit.photos.all %}
     <div class="bg-base-100 rounded-2xl border border-base-300 shadow-xs overflow-hidden">
       <div class="px-5 py-4 border-b border-base-200 flex items-center justify-between">
         <h3 class="text-sm font-semibold text-base-content">Imágenes</h3>
         <span class="text-xs font-medium text-base-content/40">{{ visit.photos.count }} imagen(es)</span>
       </div>
       <div class="p-5">
-        {% if visit.photos.all %}
-          <div class="grid grid-cols-3 md:grid-cols-4 gap-2">
-            {% for photo in visit.photos.all %}
-            <div>
-              <button type="button" class="block w-full" onclick="openLightbox('{{ photo.image.url }}', '{{ photo.get_photo_type_display }}')">
-                <img src="{{ photo.image.url }}"
-                     alt="{{ photo.get_photo_type_display }}"
-                     class="w-full aspect-square object-cover rounded-xl border border-base-200 hover:border-primary/30 hover:shadow-md transition-all duration-150 cursor-zoom-in">
-              </button>
-              <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                <span class="badge badge-sm badge-ghost text-xs">{{ photo.description|default:photo.get_photo_type_display }}</span>
-                {% if photo.taken_at %}
-                  <span class="text-xs text-base-content/40">{{ photo.taken_at|date:"d/m H:i" }}</span>
-                {% endif %}
-              </div>
+        <div class="grid grid-cols-4 gap-2 items-start">
+          {% for photo in visit.photos.all %}
+          <div>
+            <button type="button" class="block w-full" onclick="openLightbox('{{ photo.image.url }}', '{{ photo.description|default:photo.get_photo_type_display }}', '{{ photo.taken_at|date:"d-m-Y H:i" }}')">
+              <img src="{{ photo.image.url }}"
+                   alt="{{ photo.get_photo_type_display }}"
+                   class="w-full h-auto rounded-xl border border-base-200 hover:border-primary/30 hover:shadow-md transition-all duration-150 cursor-zoom-in">
+            </button>
+            <div class="mt-1.5 space-y-0.5 text-center">
+              <span class="badge badge-sm badge-ghost text-xs">{{ photo.description|default:photo.get_photo_type_display }}</span>
+              {% if photo.taken_at %}
+              <p class="text-xs text-base-content/50">{{ photo.taken_at|date:"d-m-Y H:i" }}</p>
+              {% endif %}
+              {% if photo.latitude and photo.longitude %}
+              <a href="https://www.google.com/maps/search/?api=1&query={{ photo.latitude|stringformat:'.6f' }},{{ photo.longitude|stringformat:'.6f' }}"
+                 target="_blank"
+                 class="text-[10px] text-info hover:underline font-mono block">
+                {{ photo.latitude|stringformat:".6f" }}, {{ photo.longitude|stringformat:".6f" }}
+              </a>
+              {% endif %}
             </div>
-            {% endfor %}
           </div>
-        {% else %}
-          <div class="flex flex-col items-center justify-center py-12 text-center">
-            <div class="w-10 h-10 rounded-xl bg-base-200 flex items-center justify-center mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-            </div>
-            <p class="text-sm text-base-content/30">Sin imágenes registradas</p>
-          </div>
-        {% endif %}
+          {% endfor %}
+        </div>
       </div>
     </div>
+    {% endif %}
 
     <!-- Mapa de ruta (debajo de imágenes, solo si hay tracking points) -->
     {% if tracking_points_geo %}
@@ -341,8 +428,64 @@
           <i class="fa-solid fa-map text-[11px] text-info"></i>
         </div>
         <h3 class="text-sm font-semibold text-base-content">Mapa de ruta</h3>
+        <div class="ml-auto flex rounded-lg border border-base-300 overflow-hidden text-[10px] font-medium" id="map-layer-switcher">
+          <button data-layer="streets" class="px-2.5 py-1 bg-base-200 text-base-content transition-colors">Calles</button>
+          <button data-layer="satellite" class="px-2.5 py-1 text-base-content/40 border-l border-base-300 transition-colors hover:text-base-content">Satélite</button>
+          <button data-layer="topo" class="px-2.5 py-1 text-base-content/40 border-l border-base-300 transition-colors hover:text-base-content">Topo</button>
+        </div>
       </div>
-      <div id="visit-map" style="height:400px;"></div>
+      <div class="flex">
+        <!-- Panel tracking (solo mobile) -->
+        {% if visit.tracking_points.all %}
+        <div class="lg:hidden w-36 shrink-0 border-r border-base-200 overflow-y-auto" style="height:400px;">
+          <div class="py-2 px-2 flex flex-col gap-0">
+            {% for step in tracking_steps %}
+            <div class="flex items-stretch gap-1.5">
+              <div class="flex flex-col items-center shrink-0 w-4">
+                <div class="w-px flex-none {% if forloop.first %}invisible{% endif %} bg-base-300" style="height:8px"></div>
+                <div class="w-4 h-4 rounded-full shrink-0 flex items-center justify-center
+                  {% if step.event == 'salida' %}bg-base-content/20
+                  {% elif step.event == 'llegada' %}bg-warning
+                  {% elif step.event == 'inicio' %}bg-info
+                  {% elif step.event == 'cierre' %}bg-primary
+                  {% elif step.event == 'finalizado' %}bg-success
+                  {% else %}bg-base-300{% endif %}">
+                  {% if step.event == 'salida' %}<i class="fa-solid fa-car text-[7px] text-base-content/60"></i>
+                  {% elif step.event == 'llegada' %}<i class="fa-solid fa-location-dot text-[7px] text-white"></i>
+                  {% elif step.event == 'inicio' %}<i class="fa-solid fa-wrench text-[7px] text-white"></i>
+                  {% elif step.event == 'cierre' %}<i class="fa-solid fa-flag-checkered text-[7px] text-white"></i>
+                  {% elif step.event == 'finalizado' %}<i class="fa-solid fa-screwdriver-wrench text-[7px] text-white"></i>
+                  {% else %}<i class="fa-solid fa-circle text-[7px] text-base-content/30"></i>
+                  {% endif %}
+                </div>
+                <div class="w-px flex-1 mt-0.5 {% if forloop.last %}invisible{% endif %} bg-base-300"></div>
+              </div>
+              <div class="flex-1 pb-3 self-start pt-0.5">
+                {% if step.elapsed %}<p class="text-[8px] text-accent font-mono tabular-nums leading-none mb-0.5 text-right">+{{ step.elapsed }}</p>{% endif %}
+                <p class="text-[10px] font-semibold text-base-content leading-tight">
+                  {% if step.event == 'salida' %}Movilización
+                  {% elif step.event == 'llegada' %}Llegada
+                  {% elif step.event == 'inicio' %}Inicio
+                  {% elif step.event == 'cierre' %}Cierre
+                  {% elif step.event == 'finalizado' %}Finalizado
+                  {% else %}{{ step.event_display }}{% endif %}
+                </p>
+                <p class="text-[9px] text-base-content/70 font-mono leading-tight mt-0.5">{{ step.timestamp|date:"H:i" }} · {{ step.timestamp|date:"d-m-y" }}</p>
+                <a href="https://www.google.com/maps/search/?api=1&query={{ step.latitude|stringformat:'.6f' }},{{ step.longitude|stringformat:'.6f' }}"
+                   target="_blank"
+                   class="text-[8px] text-info hover:underline font-mono leading-tight mt-0.5 block">
+                  <span class="block">lat:{{ step.latitude|stringformat:".6f" }}</span>
+                  <span class="block">lon:{{ step.longitude|stringformat:".6f" }}</span>
+                </a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+        <!-- Mapa -->
+        <div class="flex-1" id="visit-map" style="height:400px;"></div>
+      </div>
     </div>
     {% endif %}
 
@@ -360,7 +503,10 @@
       </button>
       <img id="lightbox-img" src="" alt=""
            class="w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl bg-base-900">
-      <p id="lightbox-caption" class="text-center text-xs text-white/70 mt-2"></p>
+      <div class="text-center mt-2 space-y-0.5">
+        <p id="lightbox-caption" class="text-sm font-semibold text-white/90"></p>
+        <p id="lightbox-date" class="text-xs font-mono text-white/50"></p>
+      </div>
     </div>
   </div>
   <form method="dialog" class="modal-backdrop bg-black/70">
@@ -369,9 +515,10 @@
 </dialog>
 
 <script>
-function openLightbox(url, caption) {
+function openLightbox(url, caption, takenAt) {
   document.getElementById('lightbox-img').src = url;
   document.getElementById('lightbox-caption').textContent = caption;
+  document.getElementById('lightbox-date').textContent = takenAt || '';
   document.getElementById('lightbox').showModal();
 }
 document.getElementById('lightbox').addEventListener('click', function(e) {
@@ -386,6 +533,7 @@ document.getElementById('lightbox').addEventListener('click', function(e) {
 {{ site_geo|json_script:"visit-site-data" }}
 {{ tracking_points_geo|json_script:"visit-tracking-data" }}
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
 (function () {
   'use strict';
@@ -403,10 +551,30 @@ document.getElementById('lightbox').addEventListener('click', function(e) {
   var successColor   = cssVar('--color-success')    || '#10B981';
 
   var map = L.map('visit-map', { zoomControl: true });
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-    maxZoom: 19,
-  }).addTo(map);
+
+  var tileLayers = {
+    streets:   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }),
+    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri', maxZoom: 19 }),
+    topo:      L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: '© OpenTopoMap', maxZoom: 17 }),
+  };
+  var activeLayer = tileLayers.streets;
+  activeLayer.addTo(map);
+
+  document.getElementById('map-layer-switcher').addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    var key = btn.dataset.layer;
+    if (!tileLayers[key] || tileLayers[key] === activeLayer) return;
+    map.removeLayer(activeLayer);
+    activeLayer = tileLayers[key];
+    activeLayer.addTo(map);
+    this.querySelectorAll('button').forEach(function (b) {
+      var active = b.dataset.layer === key;
+      b.classList.toggle('bg-base-200', active);
+      b.classList.toggle('text-base-content', active);
+      b.classList.toggle('text-base-content/40', !active);
+    });
+  });
 
   // Icono del sitio — globo tipo Leaflet
   function siteIcon() {
@@ -424,17 +592,21 @@ document.getElementById('lightbox').addEventListener('click', function(e) {
     });
   }
 
-  // Icono de tracking point numerado
-  var eventColors = { salida: infoColor, llegada: warningColor, inicio: successColor, cierre: primaryColor, finalizado: primaryColor };
-  function trackIcon(n, event) {
-    var color = eventColors[event] || '#6B7280';
+  // Icono de tracking point con FA icon
+  var eventColors = { salida: '#9CA3AF', llegada: warningColor, inicio: infoColor, cierre: primaryColor, finalizado: successColor };
+  var eventIcons  = { salida: 'fa-car', llegada: 'fa-location-dot', inicio: 'fa-wrench', cierre: 'fa-flag-checkered', finalizado: 'fa-screwdriver-wrench' };
+  function trackIcon(event) {
+    var isSalida   = event === 'salida';
+    var bg         = isSalida ? 'rgba(0,0,0,0.15)' : (eventColors[event] || '#6B7280');
+    var iconColor  = isSalida ? 'rgba(0,0,0,0.5)'  : 'white';
+    var iconClass  = eventIcons[event] || 'fa-circle';
     return L.divIcon({
       className: '',
       iconSize: [26, 26],
       iconAnchor: [13, 13],
       popupAnchor: [0, -14],
-      html: '<div style="width:26px;height:26px;border-radius:50%;background:' + color + ';display:flex;align-items:center;justify-content:center;box-shadow:0 1px 6px rgba(0,0,0,0.25);border:2px solid white;">'
-           + '<span style="color:white;font-size:9px;font-weight:700;line-height:1;">' + n + '</span></div>',
+      html: '<div style="width:26px;height:26px;border-radius:50%;background:' + bg + ';display:flex;align-items:center;justify-content:center;box-shadow:0 1px 6px rgba(0,0,0,0.25);border:2px solid white;">'
+          + '<i class="fa-solid ' + iconClass + '" style="color:' + iconColor + ';font-size:10px;"></i></div>',
     });
   }
 
@@ -451,20 +623,24 @@ document.getElementById('lightbox').addEventListener('click', function(e) {
   var latlngs = trackData.map(function (p) { return [p.lat, p.lng]; });
   L.polyline(latlngs, { color: primaryColor, weight: 3, opacity: 0.7, dashArray: null }).addTo(map);
 
-  // Marcadores de tracking points
+  // Marcadores de tracking points con clustering
+  var clusterGroup = L.markerClusterGroup({ maxClusterRadius: 40 });
+
   trackData.forEach(function (pt, i) {
     var ts = new Date(pt.timestamp);
     var timeStr = ts.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
     var dateStr = ts.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' });
-    L.marker([pt.lat, pt.lng], { icon: trackIcon(i + 1, pt.event) })
-      .addTo(map)
+    var marker = L.marker([pt.lat, pt.lng], { icon: trackIcon(pt.event) })
       .bindPopup(
         '<strong style="font-size:12px;">' + pt.event_display + '</strong><br>'
         + '<span style="font-size:11px;color:#888;">' + dateStr + ' ' + timeStr + '</span><br>'
         + '<span style="font-size:10px;font-family:monospace;color:#aaa;">' + pt.lat.toFixed(5) + ', ' + pt.lng.toFixed(5) + '</span>'
       );
+    clusterGroup.addLayer(marker);
     bounds.push([pt.lat, pt.lng]);
   });
+
+  map.addLayer(clusterGroup);
 
   map.fitBounds(bounds, { padding: [24, 24] });
 

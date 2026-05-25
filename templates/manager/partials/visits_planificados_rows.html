@@ -42,7 +42,7 @@
   </td>
   <td class="py-3.5 text-center">
     <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-center gap-1">
-      {% if request.user.role == 'super_manager' %}
+      {% if request.user.role == 'super_manager' or request.user.is_superuser %}
       <form method="post" action="{% url 'manager:visit_approve' pk=visit.pk %}">
         {% csrf_token %}
         <button type="button" onclick="confirmVisitAction(this,'aprobar','{{ visit.technician.get_full_name|default:visit.technician.email }}','{{ visit.site.code }}')"
@@ -53,14 +53,12 @@
         Rechazar
       </button>
       {% else %}
-      <a href="{% url 'manager:visit_edit' pk=visit.pk %}"
-         class="btn btn-edit btn-xs h-7 min-h-0 px-2.5 font-medium">
+      <button type="button"
+              data-url="{% url 'manager:visit_edit' pk=visit.pk %}"
+              onclick="openVisitEditModal(this.dataset.url)"
+              class="btn btn-edit btn-xs h-7 min-h-0 px-2.5 font-medium">
         <i class="fa-solid fa-pen text-xs"></i>
         Editar
-      </a>
-      <button onclick="document.getElementById('cancel-visit-{{ visit.pk }}').showModal()"
-              class="btn btn-ghost btn-xs h-7 min-h-0 px-2.5 text-error hover:bg-error/8">
-        Cancelar
       </button>
       {% endif %}
     </div>

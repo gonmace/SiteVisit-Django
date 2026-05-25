@@ -117,6 +117,12 @@ seed-reset:
 flush-demo:
 	bash flush_demo.sh
 
+demo-reset:
+	$(MANAGE) reset_demo_world
+
+demo-reset-force:
+	$(MANAGE) reset_demo_world --yes
+
 collect:
 	$(MANAGE) collectstatic --noinput
 

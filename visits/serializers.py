@@ -23,6 +23,10 @@ class VisitBaseSerializer(serializers.ModelSerializer):
     site_code          = serializers.SerializerMethodField()
     site_operator_code = serializers.SerializerMethodField()
     site_name          = serializers.SerializerMethodField()
+    has_tracking       = serializers.SerializerMethodField()
+
+    def get_has_tracking(self, obj):
+        return bool(obj.tracking_points.all())
 
     def get_technician_name(self, obj):
         return obj.technician.get_full_name() or obj.technician.email
@@ -52,6 +56,8 @@ class VisitListSerializer(VisitBaseSerializer):
             'status', 'reason', 'scheduled_date', 'eta',
             'hora_inicio_trabajos', 'hora_fin_trabajos',
             'approved_at', 'rejected_at',
+            'cancelled_at', 'status_before_cancellation',
+            'has_tracking',
             'notas', 'created_at',
         ]
 
@@ -68,11 +74,21 @@ class VisitDetailSerializer(VisitBaseSerializer):
             'site', 'site_code', 'site_operator_code', 'site_name',
             'status', 'reason', 'scheduled_date', 'eta',
             'hora_inicio_trabajos', 'hora_fin_trabajos',
-            'notas', 'approved_by', 'approved_at', 'rejected_by', 'rejected_at', 'rejection_reason',
+            'notas',
+            'approved_by', 'approved_at',
+            'rejected_by', 'rejected_at', 'rejection_reason', 'status_before_rejection',
+            'cancelled_by', 'cancelled_at', 'cancellation_reason', 'status_before_cancellation',
+            'has_tracking',
             'created_at', 'photos', 'tracking_points',
         ]
-        read_only_fields = ['id', 'status', 'coordinator', 'approved_by', 'approved_at',
-                            'rejected_by', 'rejected_at', 'created_at']
+        read_only_fields = [
+            'id', 'status', 'coordinator',
+            'approved_by', 'approved_at',
+            'rejected_by', 'rejected_at', 'status_before_rejection',
+            'cancelled_by', 'cancelled_at', 'status_before_cancellation',
+            'has_tracking',
+            'created_at',
+        ]
 
 
 class VisitStatusSerializer(serializers.Serializer):
