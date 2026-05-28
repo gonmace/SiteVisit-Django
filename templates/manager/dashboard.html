@@ -712,7 +712,7 @@
   map.addLayer(clusterGroup);
 
   // Capa 2: globos balloon para todos los sitios del catálogo (el toggle la añade/quita)
-  var allSitesGroup = L.layerGroup();
+  var allSitesGroup = L.markerClusterGroup({ chunkedLoading: true });
 
   // ── Iconos de tracking (mismo esquema que visit_detail) ──
 
