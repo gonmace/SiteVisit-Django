@@ -851,7 +851,7 @@
       });
   }
 
-  // Precarga única del catálogo de sitios al iniciar
+  // Precarga única del catálogo de sitios al iniciar (sin paginación)
   fetch('/api/v1/sites/', { credentials: 'same-origin' })
     .then(function (r) { return r.json(); })
     .then(function (data) {
