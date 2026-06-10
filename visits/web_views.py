@@ -293,6 +293,15 @@ class VisitCreateWebView(VisitFormMixin, PortalAccessRequiredMixin, View):
             msg = f'Servicio #{visit.pk} creado y aprobado automáticamente.'
         else:
             msg = f'Servicio #{visit.pk} creado. Pendiente de aprobación del manager.'
+            from notifications.models import Notification
+            from notifications.services import notify_supervisors
+            notify_supervisors(
+                event=Notification.Event.VISIT_PENDING,
+                title=f'Servicio #{visit.pk} pendiente de aprobación',
+                body=f'{technician.get_full_name()} — {site.name} — {scheduled_date}',
+                url=reverse('manager:visit_detail', args=[visit.pk]),
+                exclude_user=request.user,
+            )
         messages.success(request, msg)
         return redirect(reverse('manager:visits_approval') + '?tab=planificados&q=')
 

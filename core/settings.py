@@ -79,6 +79,7 @@ TEMPLATES = [
                 'home.context_processors.theme',
                 'visits.context_processors.pending_visits_count',
                 'users.context_processors.pending_technicians_count',
+                'notifications.context_processors.notifications_context',
             ],
         },
     },
@@ -274,6 +275,7 @@ INSTALLED_APPS += [
     'visits',
     'photos',
     'dashboard',
+    'notifications',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
@@ -322,3 +324,10 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())
 
 LOGIN_REDIRECT_URL = '/manager/'
+
+# ── Web Push (VAPID) ──────────────────────────────────────────────────────────
+# Claves generadas una sola vez (make setup / scripts/generate_vapid.py).
+# NUNCA regenerarlas en producción: invalida todas las suscripciones existentes.
+VAPID_PUBLIC_KEY  = config('VAPID_PUBLIC_KEY', default='')
+VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
+VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='admin@example.com')

@@ -139,6 +139,17 @@ class ActivateView(APIView):
         target_user.status = User.Status.PENDING
         target_user.save(update_fields=['status'])
 
+        from django.urls import reverse
+
+        from notifications.models import Notification
+        from notifications.services import notify_supervisors
+        notify_supervisors(
+            event=Notification.Event.TECHNICIAN_PENDING,
+            title='Técnico pendiente de aprobación',
+            body=f'{target_user.get_full_name()} registró su dispositivo y espera aprobación.',
+            url=reverse('manager:pending_activations'),
+        )
+
         if 'image' in data:
             ProfilePhoto.objects.update_or_create(
                 user=target_user,

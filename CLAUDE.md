@@ -39,6 +39,7 @@ On Windows: `NPM_BIN_PATH = r'C:\Program Files\nodejs\npm.cmd'` en `settings.py`
 | `sites/`     | `Site` (catálogo de sitios telecom)                                                  |
 | `visits/`    | `Visit` (máquina de estados), `VisitPhoto`, `VisitTrackingPoint`, API + web views    |
 | `dashboard/` | `StatsView` — métricas agregadas para Manager/Viewer                                 |
+| `notifications/` | `Notification` (campana del navbar), `PushSubscription` (Web Push), `notify_supervisors()` |
 
 
 Al agregar una app: `INSTALLED_APPS` + `@source "../../../<app>"` en `theme/static_src/src/styles.css`.
@@ -257,6 +258,24 @@ Context processor `home.context_processors.theme` inyecta la paleta en todos los
 | `/api/v1/dashboard/stats/`      | GET      | Manager / Viewer |
 | `/api/v1/theme/`                | GET      | Anon             |
 
+
+---
+
+## Notificaciones (campana + Web Push)
+
+**Solo para `super_manager` y superuser** — los managers regulares NO ven la campana ni reciben push.
+
+- App `notifications/`: modelos `Notification` (historial campana) y `PushSubscription` (un registro por navegador).
+- Servicio central: `notifications.services.notify_supervisors(event, title, body, url, exclude_user)` — crea las `Notification` y envía Web Push en un `threading.Thread` daemon (sin Celery). **Nunca lanza excepción.**
+- Eventos que notifican (hooks inline, no signals):
+  - Visita creada `PENDIENTE_APROBACION` → `visits/web_views.py` (`VisitCreateWebView.post`)
+  - Técnico pasa a `PENDING` → `users/views.py` (`ActivateView.post`)
+- Endpoints campana bajo `/manager/notifications/` con sesión + `SuperManagerRequiredMixin` (list, unread-count, read, read-all, subscribe, unsubscribe).
+- PWA: `/sw.js` y `/manifest.json` servidos desde la raíz vía `TemplateView` (templates `sw.js` y `manifest.json` — **no** mover a static: el hash de whitenoise rompería las actualizaciones del SW). Iconos en `static/img/icon-192.png`, `icon-512.png`, `apple-touch-icon.png`.
+- **iOS**: las push solo llegan si el portal está instalado en pantalla de inicio (iOS 16.4+). El botón de la campana muestra la guía de instalación cuando detecta iOS sin standalone.
+- Claves VAPID en `.env` (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_ADMIN_EMAIL`). Generar con `python scripts/generate_vapid.py`. **NUNCA regenerarlas en producción** — invalida todas las suscripciones.
+- Trampa pywebpush: `vapid_claims` debe ser un dict nuevo en cada llamada (la librería lo muta).
+- JS de la campana: `static/js/notifications.js` (config vía data-attrs de `#notif-bell` en `base.html`). Polling de `unread-count` cada 60s.
 
 ---
 

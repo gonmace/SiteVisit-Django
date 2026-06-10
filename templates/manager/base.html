@@ -10,6 +10,14 @@
   <title>{% block title %}Portal Manager{% endblock %} — SiteVisit</title>
   <link rel="icon" href="{% static 'img/favicon.ico' %}" sizes="any">
   <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SiteVisit">
+  <meta name="theme-color" content="#ffffff">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -129,6 +137,43 @@
                 </svg>
               </label>
 
+              {% if request.user.is_superuser or request.user.role == 'super_manager' %}
+              <!-- Campana de notificaciones (solo super_manager / superuser) -->
+              <div class="dropdown dropdown-end" id="notif-bell"
+                   data-vapid-key="{{ vapid_public_key }}"
+                   data-url-list="{% url 'manager:notifications_list' %}"
+                   data-url-unread="{% url 'manager:notifications_unread_count' %}"
+                   data-url-read="{% url 'manager:notification_read' 0 %}"
+                   data-url-read-all="{% url 'manager:notifications_read_all' %}"
+                   data-url-subscribe="{% url 'manager:push_subscribe' %}"
+                   data-url-unsubscribe="{% url 'manager:push_unsubscribe' %}">
+                <label tabindex="0"
+                       class="btn btn-ghost btn-sm w-9 h-9 min-h-0 p-0 rounded-lg
+                              border border-base-300 text-base-content/50 hover:text-base-content indicator"
+                       title="Notificaciones">
+                  <i class="fa-regular fa-bell text-sm"></i>
+                  <span id="notif-badge"
+                        class="indicator-item badge badge-error badge-xs px-1 font-bold text-[10px] text-white
+                               {% if not unread_notifications_count %}hidden{% endif %}">{{ unread_notifications_count|default:'' }}</span>
+                </label>
+                <div tabindex="0"
+                     class="dropdown-content z-40 mt-2 w-80 bg-base-100 rounded-xl shadow-lg border border-base-300 overflow-hidden">
+                  <div class="flex items-center justify-between px-4 py-2 border-b border-base-300">
+                    <span class="text-sm font-bold">Notificaciones</span>
+                    <button type="button" id="notif-read-all" class="btn btn-ghost btn-xs">Marcar leídas</button>
+                  </div>
+                  <ul id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-base-200">
+                    <li class="px-4 py-6 text-center text-sm text-base-content/40">Sin notificaciones</li>
+                  </ul>
+                  <div class="px-4 py-2.5 border-t border-base-300 space-y-1">
+                    <button type="button" id="push-enable-btn" class="btn btn-success btn-xs w-full hidden">
+                      <i class="fa-solid fa-bell"></i> Activar notificaciones en este dispositivo
+                    </button>
+                    <p id="push-status" class="text-[11px] text-base-content/50 text-center leading-snug"></p>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
 
               <!-- Logout (solo desktop) -->
               <form method="post" action="{% url 'manager:logout' %}" class="hidden md:flex">
@@ -651,6 +696,43 @@
   </script>
 
   <form id="confirm-post-form" method="post" style="display:none">{% csrf_token %}</form>
+
+  {% if request.user.is_superuser or request.user.role == 'super_manager' %}
+  <!-- Guía de instalación en iPhone (las push en iOS requieren la app en pantalla de inicio) -->
+  <dialog id="ios-install-modal" class="modal">
+    <div class="modal-box rounded-2xl px-6 pt-7 pb-6 max-w-sm shadow-lg">
+      <div class="w-14 h-14 rounded-full bg-info/10 text-info flex items-center justify-center mx-auto mb-4">
+        <i class="fa-brands fa-apple text-2xl"></i>
+      </div>
+      <h3 class="text-base font-bold text-base-content text-center mb-1.5">Instala SiteVisit en tu iPhone</h3>
+      <p class="text-sm text-base-content/55 text-center leading-relaxed mb-4">
+        Para recibir notificaciones en el iPhone, primero añade el portal a tu pantalla de inicio:
+      </p>
+      <ol class="text-sm text-base-content/80 space-y-2.5 mb-2">
+        <li class="flex items-start gap-2.5">
+          <span class="badge badge-sm badge-neutral shrink-0 mt-0.5">1</span>
+          <span>Toca el botón <strong>Compartir</strong> <i class="fa-solid fa-arrow-up-from-bracket text-info"></i> en la barra de Safari</span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="badge badge-sm badge-neutral shrink-0 mt-0.5">2</span>
+          <span>Selecciona <strong>Añadir a pantalla de inicio</strong> <i class="fa-regular fa-square-plus text-info"></i></span>
+        </li>
+        <li class="flex items-start gap-2.5">
+          <span class="badge badge-sm badge-neutral shrink-0 mt-0.5">3</span>
+          <span>Abre <strong>SiteVisit</strong> desde el nuevo icono y vuelve a tocar <strong>Activar notificaciones</strong></span>
+        </li>
+      </ol>
+      <div class="flex justify-center mt-5">
+        <form method="dialog">
+          <button class="btn btn-ghost btn-sm h-9 min-h-0 text-xs">Entendido</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>cerrar</button></form>
+  </dialog>
+
+  <script src="{% static 'js/notifications.js' %}" defer></script>
+  {% endif %}
 
   {% block extra_scripts %}{% endblock %}
 </body>

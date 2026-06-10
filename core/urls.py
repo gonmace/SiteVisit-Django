@@ -21,6 +21,15 @@ urlpatterns = [
         content_type='text/plain',
         extra_context={'ADMIN_URL': settings.ADMIN_URL},
     )),
+    # PWA: servidos desde la raíz (scope '/' del service worker, sin hash de whitenoise)
+    path('sw.js', TemplateView.as_view(
+        template_name='sw.js',
+        content_type='application/javascript',
+    ), name='service_worker'),
+    path('manifest.json', TemplateView.as_view(
+        template_name='manifest.json',
+        content_type='application/manifest+json',
+    ), name='pwa_manifest'),
     path('api/token/', CustomTokenObtainPairView.as_view()),
     path('api/token/refresh/', TokenRefreshView.as_view()),
     path('api/v1/users/', include('users.urls')),

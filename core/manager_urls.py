@@ -3,6 +3,14 @@ from django.urls import include, path
 
 from dashboard.web_views import DashboardWebView
 from home.web_views import AppReleaseView
+from notifications.web_views import (
+    NotificationListView,
+    NotificationMarkAllReadView,
+    NotificationMarkReadView,
+    NotificationUnreadCountView,
+    PushSubscribeView,
+    PushUnsubscribeView,
+)
 from sites.web_views import SiteCreateView, SiteDeleteView, SiteDetailView, SiteExportView, SiteImportView, SiteSearchJsonView, SiteTemplateView, SitesListView, SiteUpdateView
 from users.web_views import (
     ApproveActivationView,
@@ -100,6 +108,14 @@ urlpatterns = [
     path('activations/',                  PendingActivationsView.as_view(),  name='pending_activations'),
     path('activations/<int:pk>/approve/', ApproveActivationView.as_view(),   name='approve_activation'),
     path('activations/<int:pk>/reject/',  RejectActivationView.as_view(),    name='reject_activation'),
+
+    # Notifications (solo super_manager / superuser)
+    path('notifications/',                 NotificationListView.as_view(),        name='notifications_list'),
+    path('notifications/unread-count/',    NotificationUnreadCountView.as_view(), name='notifications_unread_count'),
+    path('notifications/<int:pk>/read/',   NotificationMarkReadView.as_view(),    name='notification_read'),
+    path('notifications/read-all/',        NotificationMarkAllReadView.as_view(), name='notifications_read_all'),
+    path('notifications/subscribe/',       PushSubscribeView.as_view(),           name='push_subscribe'),
+    path('notifications/unsubscribe/',     PushUnsubscribeView.as_view(),         name='push_unsubscribe'),
 
     # Photos
     path('photos/', include('photos.urls', namespace='photos')),
